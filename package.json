@@ -5,5 +5,14 @@
   "main": "index.js",
   "repository": "git@github.com:JoshOY/quartz-cron-parser.git",
   "author": "Josh Ouyang <me@joshoy.org>",
-  "license": "MIT"
+  "license": "MIT",
+  "scripts": {
+    "gen-parser": "nearleyc grammar.ne -o grammar.js",
+    "compile": "node ./compile.js"
+  },
+  "devDependencies": {
+    "moo": "^0.5.1",
+    "nearley": "^2.20.1"
+  },
+  "dependencies": {}
 }
