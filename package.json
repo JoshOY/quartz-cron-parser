@@ -1,0 +1,9 @@
+{
+  "name": "quartz-cron-parser",
+  "version": "0.0.1",
+  "description": "A quartz cron expression parser",
+  "main": "index.js",
+  "repository": "git@github.com:JoshOY/quartz-cron-parser.git",
+  "author": "Josh Ouyang <me@joshoy.org>",
+  "license": "MIT"
+}
