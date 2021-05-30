@@ -43,6 +43,13 @@
     };
   }
 
+  function convertDayOfMapStringSpecifics([d0, d1, d2]) {
+    return {
+      mode: 'specific',
+      value: Array.isArray(d2.value) ? [WEEKDAY_MAP[d0[0]], ...d2.value] : [WEEKDAY_MAP[d0[0]], d2.value],
+    };
+  }
+
   function convertDigitsToMinuteOrSecond(d) {
     const value = Number(d);
     if (value >= 60) {
@@ -72,6 +79,11 @@
     if ((value < 1) || (value > 7)) {
       throw new Error("Day of week must be between 1 and 7");
     }
+    return { mode: 'specific', value: value };
+  }
+
+  function convertStringToDayOfWeek(d) {
+    const value = WEEKDAY_MAP[`${d}`];
     return { mode: 'specific', value: value };
   }
 
@@ -301,10 +313,10 @@ specificWeekdayDigits
 specificWeekdayDigit -> digits {% convertDigitsToDayOfWeek %}
 
 specificWeekdaysStrs
- -> weekdayStrFormat "," specificWeekdaysStrs {% convertSpecifics %}
-  | weekdayStrFormat {% id %}
+ -> specificWeekdayString "," specificWeekdaysStrs {% convertDayOfMapStringSpecifics %}
+  | specificWeekdayString {% convertStringToDayOfWeek %}
 
-weekdayStrFormat -> "SUN" | "MON" | "TUE" | "WED" | "THU" | "FRI" | "SAT" {% d => WEEKDAY_MAP[d] %}
+specificWeekdayString -> "SUN" | "MON" | "TUE" | "WED" | "THU" | "FRI" | "SAT" {% convertStringToDayOfWeek %}
 
 ###################
 #  Year settings  #

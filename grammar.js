@@ -45,6 +45,13 @@ function id(x) { return x[0]; }
     };
   }
 
+  function convertDayOfMapStringSpecifics([d0, d1, d2]) {
+    return {
+      mode: 'specific',
+      value: Array.isArray(d2.value) ? [WEEKDAY_MAP[d0[0]], ...d2.value] : [WEEKDAY_MAP[d0[0]], d2.value],
+    };
+  }
+
   function convertDigitsToMinuteOrSecond(d) {
     const value = Number(d);
     if (value >= 60) {
@@ -61,6 +68,27 @@ function id(x) { return x[0]; }
     return { mode: 'specific', value: value };
   }
 
+  function convertDigitsToDay(d) {
+    const value = Number(d);
+    if ((value < 1) || (value > 31)) {
+      throw new Error("Day must be between 1 and 31");
+    }
+    return { mode: 'specific', value: value };
+  }
+
+  function convertDigitsToDayOfWeek(d) {
+    const value = Number(d);
+    if ((value < 1) || (value > 7)) {
+      throw new Error("Day of week must be between 1 and 7");
+    }
+    return { mode: 'specific', value: value };
+  }
+
+  function convertStringToDayOfWeek(d) {
+    const value = WEEKDAY_MAP[`${d}`];
+    return { mode: 'specific', value: value };
+  }
+
   function convertDigitsToYear(d) {
     const value = Number(d);
     if ((value < 1970) || (value > 2099)) {
@@ -69,13 +97,6 @@ function id(x) { return x[0]; }
     return { mode: 'specific', value: value };
   }
 
-  function convertDigitsToDay(d) {
-    const value = Number(d);
-    if ((value < 1) || (value > 31)) {
-      throw new Error("Day must be between 1 and 31");
-    }
-    return { mode: 'specific', value: value };
-  }
 
   function convertIncrementalFnFactory(fieldType, cycleRng, lowerBoundary = 0) {
     // Example: "5/20" represents: Every 20 seconds starting at second 5
@@ -97,7 +118,6 @@ function id(x) { return x[0]; }
     return (d) => {
       const start = Number(d[0]);
       const end = Number(d[2]);
-       // TODO: still buggy
       if (start >= cycleRng || end < lowerBoundary) {
         throw new Error(`(${fieldType}) Unsupported value '${start}-${end}' for range. Accepted values are ${lowerBoundary}-${cycleRng - 1}`);
       }
@@ -243,28 +263,29 @@ var grammar = {
     {"name": "monthStrFormat$string$12", "symbols": [{"literal":"D"}, {"literal":"E"}, {"literal":"C"}], "postprocess": function joiner(d) {return d.join('');}},
     {"name": "monthStrFormat", "symbols": ["monthStrFormat$string$12"], "postprocess": d => MONTH_MAP[d]},
     {"name": "dayOfWeek", "symbols": ["_dayOfWeek"], "postprocess": unwrapAndAddScopeName('dayOfWeek')},
-    {"name": "_dayOfWeek", "symbols": ["digits"]},
-    {"name": "_dayOfWeek", "symbols": ["specificWeekdays"]},
+    {"name": "_dayOfWeek", "symbols": ["specificWeekdayDigits"]},
+    {"name": "_dayOfWeek", "symbols": ["specificWeekdaysStrs"]},
     {"name": "_dayOfWeek", "symbols": ["every"]},
     {"name": "_dayOfWeek", "symbols": ["noSpecificValue"]},
-    {"name": "specificWeekdays", "symbols": ["specificWeekday", {"literal":","}, "specificWeekdays"]},
-    {"name": "specificWeekdays", "symbols": ["specificWeekday"]},
-    {"name": "specificWeekday", "symbols": ["digits"]},
-    {"name": "specificWeekday", "symbols": ["weekdayStrFormat"]},
-    {"name": "weekdayStrFormat$string$1", "symbols": [{"literal":"S"}, {"literal":"U"}, {"literal":"N"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "weekdayStrFormat", "symbols": ["weekdayStrFormat$string$1"]},
-    {"name": "weekdayStrFormat$string$2", "symbols": [{"literal":"M"}, {"literal":"O"}, {"literal":"N"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "weekdayStrFormat", "symbols": ["weekdayStrFormat$string$2"]},
-    {"name": "weekdayStrFormat$string$3", "symbols": [{"literal":"T"}, {"literal":"U"}, {"literal":"E"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "weekdayStrFormat", "symbols": ["weekdayStrFormat$string$3"]},
-    {"name": "weekdayStrFormat$string$4", "symbols": [{"literal":"W"}, {"literal":"E"}, {"literal":"D"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "weekdayStrFormat", "symbols": ["weekdayStrFormat$string$4"]},
-    {"name": "weekdayStrFormat$string$5", "symbols": [{"literal":"T"}, {"literal":"H"}, {"literal":"U"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "weekdayStrFormat", "symbols": ["weekdayStrFormat$string$5"]},
-    {"name": "weekdayStrFormat$string$6", "symbols": [{"literal":"F"}, {"literal":"R"}, {"literal":"I"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "weekdayStrFormat", "symbols": ["weekdayStrFormat$string$6"]},
-    {"name": "weekdayStrFormat$string$7", "symbols": [{"literal":"S"}, {"literal":"A"}, {"literal":"T"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "weekdayStrFormat", "symbols": ["weekdayStrFormat$string$7"], "postprocess": d => WEEKDAY_MAP[d]},
+    {"name": "specificWeekdayDigits", "symbols": ["specificWeekdayDigit", {"literal":","}, "specificWeekdayDigits"], "postprocess": convertSpecifics},
+    {"name": "specificWeekdayDigits", "symbols": ["specificWeekdayDigit"], "postprocess": id},
+    {"name": "specificWeekdayDigit", "symbols": ["digits"], "postprocess": convertDigitsToDayOfWeek},
+    {"name": "specificWeekdaysStrs", "symbols": ["specificWeekdayString", {"literal":","}, "specificWeekdaysStrs"], "postprocess": convertDayOfMapStringSpecifics},
+    {"name": "specificWeekdaysStrs", "symbols": ["specificWeekdayString"], "postprocess": convertStringToDayOfWeek},
+    {"name": "specificWeekdayString$string$1", "symbols": [{"literal":"S"}, {"literal":"U"}, {"literal":"N"}], "postprocess": function joiner(d) {return d.join('');}},
+    {"name": "specificWeekdayString", "symbols": ["specificWeekdayString$string$1"]},
+    {"name": "specificWeekdayString$string$2", "symbols": [{"literal":"M"}, {"literal":"O"}, {"literal":"N"}], "postprocess": function joiner(d) {return d.join('');}},
+    {"name": "specificWeekdayString", "symbols": ["specificWeekdayString$string$2"]},
+    {"name": "specificWeekdayString$string$3", "symbols": [{"literal":"T"}, {"literal":"U"}, {"literal":"E"}], "postprocess": function joiner(d) {return d.join('');}},
+    {"name": "specificWeekdayString", "symbols": ["specificWeekdayString$string$3"]},
+    {"name": "specificWeekdayString$string$4", "symbols": [{"literal":"W"}, {"literal":"E"}, {"literal":"D"}], "postprocess": function joiner(d) {return d.join('');}},
+    {"name": "specificWeekdayString", "symbols": ["specificWeekdayString$string$4"]},
+    {"name": "specificWeekdayString$string$5", "symbols": [{"literal":"T"}, {"literal":"H"}, {"literal":"U"}], "postprocess": function joiner(d) {return d.join('');}},
+    {"name": "specificWeekdayString", "symbols": ["specificWeekdayString$string$5"]},
+    {"name": "specificWeekdayString$string$6", "symbols": [{"literal":"F"}, {"literal":"R"}, {"literal":"I"}], "postprocess": function joiner(d) {return d.join('');}},
+    {"name": "specificWeekdayString", "symbols": ["specificWeekdayString$string$6"]},
+    {"name": "specificWeekdayString$string$7", "symbols": [{"literal":"S"}, {"literal":"A"}, {"literal":"T"}], "postprocess": function joiner(d) {return d.join('');}},
+    {"name": "specificWeekdayString", "symbols": ["specificWeekdayString$string$7"], "postprocess": convertStringToDayOfWeek},
     {"name": "years", "symbols": ["_years"], "postprocess": unwrapAndAddScopeName('years')},
     {"name": "_years", "symbols": ["yearsIncremental"]},
     {"name": "_years", "symbols": ["yearsRange"]},
