@@ -59,6 +59,22 @@
     return { mode: 'specific', value: value };
   }
 
+  function convertDigitsToDay(d) {
+    const value = Number(d);
+    if ((value < 1) || (value > 31)) {
+      throw new Error("Day must be between 1 and 31");
+    }
+    return { mode: 'specific', value: value };
+  }
+
+  function convertDigitsToDayOfWeek(d) {
+    const value = Number(d);
+    if ((value < 1) || (value > 7)) {
+      throw new Error("Day of week must be between 1 and 7");
+    }
+    return { mode: 'specific', value: value };
+  }
+
   function convertDigitsToYear(d) {
     const value = Number(d);
     if ((value < 1970) || (value > 2099)) {
@@ -67,13 +83,6 @@
     return { mode: 'specific', value: value };
   }
 
-  function convertDigitsToDay(d) {
-    const value = Number(d);
-    if ((value < 1) || (value > 31)) {
-      throw new Error("Day must be between 1 and 31");
-    }
-    return { mode: 'specific', value: value };
-  }
 
   function convertIncrementalFnFactory(fieldType, cycleRng, lowerBoundary = 0) {
     // Example: "5/20" represents: Every 20 seconds starting at second 5
@@ -95,7 +104,6 @@
     return (d) => {
       const start = Number(d[0]);
       const end = Number(d[2]);
-       // TODO: still buggy
       if (start >= cycleRng || end < lowerBoundary) {
         throw new Error(`(${fieldType}) Unsupported value '${start}-${end}' for range. Accepted values are ${lowerBoundary}-${cycleRng - 1}`);
       }
@@ -284,13 +292,17 @@ monthStrFormat -> "JAN" | "FEB" | "MAR" | "APR" | "MAY" | "JUN" | "JUL" | "AUG" 
 
 dayOfWeek -> _dayOfWeek {% unwrapAndAddScopeName('dayOfWeek') %}
 
-_dayOfWeek -> digits | specificWeekdays | every | noSpecificValue
+_dayOfWeek -> specificWeekdayDigits | specificWeekdaysStrs | every | noSpecificValue
 
-specificWeekdays
- -> specificWeekday "," specificWeekdays
-  | specificWeekday
+specificWeekdayDigits
+ -> specificWeekdayDigit "," specificWeekdayDigits {% convertSpecifics %}
+  | specificWeekdayDigit {% id %}
 
-specificWeekday -> digits | weekdayStrFormat
+specificWeekdayDigit -> digits {% convertDigitsToDayOfWeek %}
+
+specificWeekdaysStrs
+ -> weekdayStrFormat "," specificWeekdaysStrs {% convertSpecifics %}
+  | weekdayStrFormat {% id %}
 
 weekdayStrFormat -> "SUN" | "MON" | "TUE" | "WED" | "THU" | "FRI" | "SAT" {% d => WEEKDAY_MAP[d] %}
 
