@@ -10,7 +10,8 @@
   "license": "MIT",
   "scripts": {
     "gen-parser": "nearleyc ./src/grammar.ne -o ./src/grammar.js",
-    "build": "npm run gen-parser && rimraf ./dist && rollup -c rollup.config.js"
+    "build": "npm run gen-parser && rimraf ./dist && rollup -c rollup.config.js",
+    "publish": "npm publish --access=public"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^19.0.0",
