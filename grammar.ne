@@ -43,22 +43,6 @@
     };
   }
 
-  function convertDayOfWeekSpecifics([d0, d1, d2]) {
-    const valueD0 = (typeof d0[0] === 'string') ? WEEKDAY_MAP[d0[0]] : Number(d0[0][0]);
-    if (Array.isArray(d2.value)) {
-      return {
-        mode: 'specific',
-        value: [valueD0, ...d2.value],
-      };
-    }
-    
-    // else
-    return {
-      mode: 'specific',
-      value: [valueD0, d2.value],
-    };
-  }
-
   function convertDigitsToMinuteOrSecond(d) {
     const value = Number(d);
     if (value >= 60) {
@@ -94,6 +78,48 @@
   function convertStringToDayOfWeek(d) {
     const value = WEEKDAY_MAP[d[0]];
     return { mode: 'specific', value: value };
+  }
+
+  function convertDayOfWeekSpecifics([d0, d1, d2]) {
+    const valueD0 = (typeof d0[0] === 'string') ? WEEKDAY_MAP[d0[0]] : Number(d0[0][0]);
+    if (Array.isArray(d2.value)) {
+      return {
+        mode: 'specific',
+        value: [valueD0, ...d2.value],
+      };
+    }
+    
+    // else
+    return {
+      mode: 'specific',
+      value: [valueD0, d2.value],
+    };
+  }
+
+  function convertDigitsToMonth(d) {
+    const value = Number(d);
+    return { mode: 'specific', value: value };
+  }
+
+  function convertStringToMonth(d) {
+    const value = MONTH_MAP[d[0]];
+    return { mode: 'specific', value: value };
+  }
+
+  function convertMonthSpecifics([d0, d1, d2]) {
+    const valueD0 = (typeof d0[0] === 'string') ? MONTH_MAP[d0[0]] : Number(d0[0][0]);
+    if (Array.isArray(d2.value)) {
+      return {
+        mode: 'specific',
+        value: [valueD0, ...d2.value],
+      };
+    }
+    
+    // else
+    return {
+      mode: 'specific',
+      value: [valueD0, d2.value],
+    };
   }
 
   function convertDigitsToYear(d) {
@@ -302,14 +328,21 @@ nearestWeekdayOfMonth -> digits weekday
 
 month -> _month  {% unwrapAndAddScopeName('month') %}
 
-_month -> monthItems | every
+_month -> specificMonths | monthIncremental | monthRange | every
 
-monthItems -> monthItem
-    |  monthItem "," monthItems
+specificMonths
+  -> specificMonthDigit "," specificMonths {% convertMonthSpecifics %}
+  |  specificMonthString "," specificMonths  {% convertMonthSpecifics %}
+  |  specificMonthDigit  {% convertDigitsToMonth %}
+  |  specificMonthString {% convertStringToMonth %}
 
-monthItem -> digits | monthStrFormat
+specificMonthDigit -> digits
 
-monthStrFormat -> "JAN" | "FEB" | "MAR" | "APR" | "MAY" | "JUN" | "JUL" | "AUG" | "SEP" | "OCT" | "NOV" | "DEC" {% d => MONTH_MAP[d] %}
+specificMonthString -> "JAN" | "FEB" | "MAR" | "APR" | "MAY" | "JUN" | "JUL" | "AUG" | "SEP" | "OCT" | "NOV" | "DEC"
+
+monthIncremental -> digits "/" digits {% convertIncrementalFnFactory('month', 13, 1) %}
+
+monthRange -> digits "-" digits {% convertRangeFnFactory('month', 13, 1) %}
 
 ##########################
 #  Day of week settings  #
@@ -334,7 +367,7 @@ dayOfWeekIncremental -> digits "/" digits {% convertIncrementalFnFactory('dayOfW
 
 dayOfWeekRange -> digits "-" digits {% convertRangeFnFactory('dayOfWeek', 8) %}
 
-lastDayOfWeekOfMonth -> digit last
+lastDayOfWeekOfMonth -> digits last
 {% (d) => {
   const value = Number(d[0]);
   if (value > 7 || value < 1) {
@@ -346,7 +379,7 @@ lastDayOfWeekOfMonth -> digit last
   };
 } %}
 
-nthWeekDayOfMonth -> digit "#" digit
+nthWeekDayOfMonth -> digits "#" digits
 {% (d) => {
   const dayValue = Number(d[0]);
   const nth = Number(d[2]);

@@ -45,22 +45,6 @@ function id(x) { return x[0]; }
     };
   }
 
-  function convertDayOfWeekSpecifics([d0, d1, d2]) {
-    const valueD0 = (typeof d0[0] === 'string') ? WEEKDAY_MAP[d0[0]] : Number(d0[0][0]);
-    if (Array.isArray(d2.value)) {
-      return {
-        mode: 'specific',
-        value: [valueD0, ...d2.value],
-      };
-    }
-    
-    // else
-    return {
-      mode: 'specific',
-      value: [valueD0, d2.value],
-    };
-  }
-
   function convertDigitsToMinuteOrSecond(d) {
     const value = Number(d);
     if (value >= 60) {
@@ -96,6 +80,48 @@ function id(x) { return x[0]; }
   function convertStringToDayOfWeek(d) {
     const value = WEEKDAY_MAP[d[0]];
     return { mode: 'specific', value: value };
+  }
+
+  function convertDayOfWeekSpecifics([d0, d1, d2]) {
+    const valueD0 = (typeof d0[0] === 'string') ? WEEKDAY_MAP[d0[0]] : Number(d0[0][0]);
+    if (Array.isArray(d2.value)) {
+      return {
+        mode: 'specific',
+        value: [valueD0, ...d2.value],
+      };
+    }
+    
+    // else
+    return {
+      mode: 'specific',
+      value: [valueD0, d2.value],
+    };
+  }
+
+  function convertDigitsToMonth(d) {
+    const value = Number(d);
+    return { mode: 'specific', value: value };
+  }
+
+  function convertStringToMonth(d) {
+    const value = MONTH_MAP[d[0]];
+    return { mode: 'specific', value: value };
+  }
+
+  function convertMonthSpecifics([d0, d1, d2]) {
+    const valueD0 = (typeof d0[0] === 'string') ? MONTH_MAP[d0[0]] : Number(d0[0][0]);
+    if (Array.isArray(d2.value)) {
+      return {
+        mode: 'specific',
+        value: [valueD0, ...d2.value],
+      };
+    }
+    
+    // else
+    return {
+      mode: 'specific',
+      value: [valueD0, d2.value],
+    };
   }
 
   function convertDigitsToYear(d) {
@@ -245,36 +271,41 @@ var grammar = {
           };
         } },
     {"name": "month", "symbols": ["_month"], "postprocess": unwrapAndAddScopeName('month')},
-    {"name": "_month", "symbols": ["monthItems"]},
+    {"name": "_month", "symbols": ["specificMonths"]},
+    {"name": "_month", "symbols": ["monthIncremental"]},
+    {"name": "_month", "symbols": ["monthRange"]},
     {"name": "_month", "symbols": ["every"]},
-    {"name": "monthItems", "symbols": ["monthItem"]},
-    {"name": "monthItems", "symbols": ["monthItem", {"literal":","}, "monthItems"]},
-    {"name": "monthItem", "symbols": ["digits"]},
-    {"name": "monthItem", "symbols": ["monthStrFormat"]},
-    {"name": "monthStrFormat$string$1", "symbols": [{"literal":"J"}, {"literal":"A"}, {"literal":"N"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "monthStrFormat", "symbols": ["monthStrFormat$string$1"]},
-    {"name": "monthStrFormat$string$2", "symbols": [{"literal":"F"}, {"literal":"E"}, {"literal":"B"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "monthStrFormat", "symbols": ["monthStrFormat$string$2"]},
-    {"name": "monthStrFormat$string$3", "symbols": [{"literal":"M"}, {"literal":"A"}, {"literal":"R"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "monthStrFormat", "symbols": ["monthStrFormat$string$3"]},
-    {"name": "monthStrFormat$string$4", "symbols": [{"literal":"A"}, {"literal":"P"}, {"literal":"R"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "monthStrFormat", "symbols": ["monthStrFormat$string$4"]},
-    {"name": "monthStrFormat$string$5", "symbols": [{"literal":"M"}, {"literal":"A"}, {"literal":"Y"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "monthStrFormat", "symbols": ["monthStrFormat$string$5"]},
-    {"name": "monthStrFormat$string$6", "symbols": [{"literal":"J"}, {"literal":"U"}, {"literal":"N"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "monthStrFormat", "symbols": ["monthStrFormat$string$6"]},
-    {"name": "monthStrFormat$string$7", "symbols": [{"literal":"J"}, {"literal":"U"}, {"literal":"L"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "monthStrFormat", "symbols": ["monthStrFormat$string$7"]},
-    {"name": "monthStrFormat$string$8", "symbols": [{"literal":"A"}, {"literal":"U"}, {"literal":"G"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "monthStrFormat", "symbols": ["monthStrFormat$string$8"]},
-    {"name": "monthStrFormat$string$9", "symbols": [{"literal":"S"}, {"literal":"E"}, {"literal":"P"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "monthStrFormat", "symbols": ["monthStrFormat$string$9"]},
-    {"name": "monthStrFormat$string$10", "symbols": [{"literal":"O"}, {"literal":"C"}, {"literal":"T"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "monthStrFormat", "symbols": ["monthStrFormat$string$10"]},
-    {"name": "monthStrFormat$string$11", "symbols": [{"literal":"N"}, {"literal":"O"}, {"literal":"V"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "monthStrFormat", "symbols": ["monthStrFormat$string$11"]},
-    {"name": "monthStrFormat$string$12", "symbols": [{"literal":"D"}, {"literal":"E"}, {"literal":"C"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "monthStrFormat", "symbols": ["monthStrFormat$string$12"], "postprocess": d => MONTH_MAP[d]},
+    {"name": "specificMonths", "symbols": ["specificMonthDigit", {"literal":","}, "specificMonths"], "postprocess": convertMonthSpecifics},
+    {"name": "specificMonths", "symbols": ["specificMonthString", {"literal":","}, "specificMonths"], "postprocess": convertMonthSpecifics},
+    {"name": "specificMonths", "symbols": ["specificMonthDigit"], "postprocess": convertDigitsToMonth},
+    {"name": "specificMonths", "symbols": ["specificMonthString"], "postprocess": convertStringToMonth},
+    {"name": "specificMonthDigit", "symbols": ["digits"]},
+    {"name": "specificMonthString$string$1", "symbols": [{"literal":"J"}, {"literal":"A"}, {"literal":"N"}], "postprocess": function joiner(d) {return d.join('');}},
+    {"name": "specificMonthString", "symbols": ["specificMonthString$string$1"]},
+    {"name": "specificMonthString$string$2", "symbols": [{"literal":"F"}, {"literal":"E"}, {"literal":"B"}], "postprocess": function joiner(d) {return d.join('');}},
+    {"name": "specificMonthString", "symbols": ["specificMonthString$string$2"]},
+    {"name": "specificMonthString$string$3", "symbols": [{"literal":"M"}, {"literal":"A"}, {"literal":"R"}], "postprocess": function joiner(d) {return d.join('');}},
+    {"name": "specificMonthString", "symbols": ["specificMonthString$string$3"]},
+    {"name": "specificMonthString$string$4", "symbols": [{"literal":"A"}, {"literal":"P"}, {"literal":"R"}], "postprocess": function joiner(d) {return d.join('');}},
+    {"name": "specificMonthString", "symbols": ["specificMonthString$string$4"]},
+    {"name": "specificMonthString$string$5", "symbols": [{"literal":"M"}, {"literal":"A"}, {"literal":"Y"}], "postprocess": function joiner(d) {return d.join('');}},
+    {"name": "specificMonthString", "symbols": ["specificMonthString$string$5"]},
+    {"name": "specificMonthString$string$6", "symbols": [{"literal":"J"}, {"literal":"U"}, {"literal":"N"}], "postprocess": function joiner(d) {return d.join('');}},
+    {"name": "specificMonthString", "symbols": ["specificMonthString$string$6"]},
+    {"name": "specificMonthString$string$7", "symbols": [{"literal":"J"}, {"literal":"U"}, {"literal":"L"}], "postprocess": function joiner(d) {return d.join('');}},
+    {"name": "specificMonthString", "symbols": ["specificMonthString$string$7"]},
+    {"name": "specificMonthString$string$8", "symbols": [{"literal":"A"}, {"literal":"U"}, {"literal":"G"}], "postprocess": function joiner(d) {return d.join('');}},
+    {"name": "specificMonthString", "symbols": ["specificMonthString$string$8"]},
+    {"name": "specificMonthString$string$9", "symbols": [{"literal":"S"}, {"literal":"E"}, {"literal":"P"}], "postprocess": function joiner(d) {return d.join('');}},
+    {"name": "specificMonthString", "symbols": ["specificMonthString$string$9"]},
+    {"name": "specificMonthString$string$10", "symbols": [{"literal":"O"}, {"literal":"C"}, {"literal":"T"}], "postprocess": function joiner(d) {return d.join('');}},
+    {"name": "specificMonthString", "symbols": ["specificMonthString$string$10"]},
+    {"name": "specificMonthString$string$11", "symbols": [{"literal":"N"}, {"literal":"O"}, {"literal":"V"}], "postprocess": function joiner(d) {return d.join('');}},
+    {"name": "specificMonthString", "symbols": ["specificMonthString$string$11"]},
+    {"name": "specificMonthString$string$12", "symbols": [{"literal":"D"}, {"literal":"E"}, {"literal":"C"}], "postprocess": function joiner(d) {return d.join('');}},
+    {"name": "specificMonthString", "symbols": ["specificMonthString$string$12"]},
+    {"name": "monthIncremental", "symbols": ["digits", {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('month', 13, 1)},
+    {"name": "monthRange", "symbols": ["digits", {"literal":"-"}, "digits"], "postprocess": convertRangeFnFactory('month', 13, 1)},
     {"name": "dayOfWeek", "symbols": ["_dayOfWeek"], "postprocess": unwrapAndAddScopeName('dayOfWeek')},
     {"name": "_dayOfWeek", "symbols": ["specificDayOfWeeks"]},
     {"name": "_dayOfWeek", "symbols": ["dayOfWeekIncremental"]},
@@ -304,7 +335,7 @@ var grammar = {
     {"name": "specificDayOfWeekString", "symbols": ["specificDayOfWeekString$string$7"]},
     {"name": "dayOfWeekIncremental", "symbols": ["digits", {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('dayOfWeek', 8)},
     {"name": "dayOfWeekRange", "symbols": ["digits", {"literal":"-"}, "digits"], "postprocess": convertRangeFnFactory('dayOfWeek', 8)},
-    {"name": "lastDayOfWeekOfMonth", "symbols": ["digit", "last"], "postprocess":  (d) => {
+    {"name": "lastDayOfWeekOfMonth", "symbols": ["digits", "last"], "postprocess":  (d) => {
           const value = Number(d[0]);
           if (value > 7 || value < 1) {
             throw new Error("(Day of Week) Day of week value must be between 1-7");
@@ -314,7 +345,7 @@ var grammar = {
             value,
           };
         } },
-    {"name": "nthWeekDayOfMonth", "symbols": ["digit", {"literal":"#"}, "digit"], "postprocess":  (d) => {
+    {"name": "nthWeekDayOfMonth", "symbols": ["digits", {"literal":"#"}, "digits"], "postprocess":  (d) => {
           const dayValue = Number(d[0]);
           const nth = Number(d[2]);
           if (dayValue > 7 || dayValue < 1) {
