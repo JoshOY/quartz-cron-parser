@@ -1,15 +1,16 @@
 {
-  "name": "quartz-cron-parser",
+  "name": "@joshoy/quartz-cron-parser",
   "version": "0.1.0",
   "description": "A quartz cron expression parser",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "repository": "git@github.com:JoshOY/quartz-cron-parser.git",
   "author": "Josh Ouyang <me@joshoy.org>",
+  "keywords": ["quartz-cron", "quartz", "cron-expression", "parser", "validator"],
   "license": "MIT",
-  "types": "dist/index.d.ts",
   "scripts": {
     "gen-parser": "nearleyc ./src/grammar.ne -o ./src/grammar.js",
-    "build": "npm run gen-parser && rollup -c rollup.config.js"
+    "build": "npm run gen-parser && rimraf ./dist && rollup -c rollup.config.js"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^19.0.0",
@@ -18,6 +19,7 @@
     "jest": "^27.0.3",
     "moo": "^0.5.1",
     "nearley": "^2.20.1",
+    "rimraf": "^3.0.2",
     "rollup": "^2.50.5",
     "rollup-plugin-dts": "^3.0.2",
     "rollup-plugin-terser": "^7.0.2",
