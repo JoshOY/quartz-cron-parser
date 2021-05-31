@@ -7,12 +7,13 @@
   "author": "Josh Ouyang <me@joshoy.org>",
   "license": "MIT",
   "scripts": {
-    "gen-parser": "nearleyc grammar.ne -o grammar.js",
-    "compile": "node ./compile.js"
+    "gen-parser": "nearleyc ./src/grammar.ne -o ./src/grammar.js"
   },
   "devDependencies": {
+    "@types/nearley": "^2.11.1",
+    "jest": "^27.0.3",
     "moo": "^0.5.1",
-    "nearley": "^2.20.1"
-  },
-  "dependencies": {}
+    "nearley": "^2.20.1",
+    "rollup": "^2.50.5"
+  }
 }
