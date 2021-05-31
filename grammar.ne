@@ -43,10 +43,19 @@
     };
   }
 
-  function convertDayOfMapStringSpecifics([d0, d1, d2]) {
+  function convertDayOfWeekSpecifics([d0, d1, d2]) {
+    const valueD0 = (typeof d0[0] === 'string') ? WEEKDAY_MAP[d0[0]] : Number(d0[0][0]);
+    if (Array.isArray(d2.value)) {
+      return {
+        mode: 'specific',
+        value: [valueD0, ...d2.value],
+      };
+    }
+    
+    // else
     return {
       mode: 'specific',
-      value: Array.isArray(d2.value) ? [WEEKDAY_MAP[d0[0]], ...d2.value] : [WEEKDAY_MAP[d0[0]], d2.value],
+      value: [valueD0, d2.value],
     };
   }
 
@@ -83,7 +92,7 @@
   }
 
   function convertStringToDayOfWeek(d) {
-    const value = WEEKDAY_MAP[`${d}`];
+    const value = WEEKDAY_MAP[d[0]];
     return { mode: 'specific', value: value };
   }
 
@@ -242,13 +251,17 @@ hoursRange -> digits "-" digits {% convertRangeFnFactory('Hours', 24) %}
 
 dayOfMonth -> _dayOfMonth {% unwrapAndAddScopeName('dayOfMonth') %}
 
-_dayOfMonth -> specificDays | every | noSpecificValue | lastDayOfMonth | lastWeekdayOfMonth | lastXDaysBeforeEndOfMonth | nearestWeekdayOfMonth
+_dayOfMonth -> specificDays | dayOfMonthIncremental | dayOfMonthRange | every | noSpecificValue | lastDayOfMonth | lastWeekdayOfMonth | lastXDaysBeforeEndOfMonth | nearestWeekdayOfMonth
 
 specificDays
   -> specificDay "," specificDays  {% convertSpecifics %}
   |  specificDay {% id %}
 
 specificDay -> digits {% convertDigitsToDay %}
+
+dayOfMonthIncremental -> digits "/" digits {% convertIncrementalFnFactory('dayOfMonth', 32) %}
+
+dayOfMonthRange -> digits "-" digits {% convertRangeFnFactory('dayOfMonth', 32) %}
 
 # L (Last day of the month)
 lastDayOfMonth -> last {% d => ({ mode: 'daysBeforeEndOfMonth', value: 0 }) %}
@@ -304,19 +317,50 @@ monthStrFormat -> "JAN" | "FEB" | "MAR" | "APR" | "MAY" | "JUN" | "JUL" | "AUG" 
 
 dayOfWeek -> _dayOfWeek {% unwrapAndAddScopeName('dayOfWeek') %}
 
-_dayOfWeek -> specificWeekdayDigits | specificWeekdaysStrs | every | noSpecificValue
+_dayOfWeek -> specificDayOfWeeks | dayOfWeekIncremental | dayOfWeekRange | lastDayOfWeekOfMonth | nthWeekDayOfMonth | every | noSpecificValue
 
-specificWeekdayDigits
- -> specificWeekdayDigit "," specificWeekdayDigits {% convertSpecifics %}
-  | specificWeekdayDigit {% id %}
+# Strangely, it is allowed to hybridize both string and numeric values. (e.g. SUN,2,3,FRI)
+specificDayOfWeeks
+ -> specificDayOfWeekDigit "," specificDayOfWeeks {% convertDayOfWeekSpecifics %}
+  | specificDayOfWeekString "," specificDayOfWeeks {% convertDayOfWeekSpecifics %}
+  | specificDayOfWeekDigit {% convertDigitsToDayOfWeek %}
+  | specificDayOfWeekString {% convertStringToDayOfWeek %}
 
-specificWeekdayDigit -> digits {% convertDigitsToDayOfWeek %}
+specificDayOfWeekDigit -> digit
 
-specificWeekdaysStrs
- -> specificWeekdayString "," specificWeekdaysStrs {% convertDayOfMapStringSpecifics %}
-  | specificWeekdayString {% convertStringToDayOfWeek %}
+specificDayOfWeekString -> "SUN" | "MON" | "TUE" | "WED" | "THU" | "FRI" | "SAT"
 
-specificWeekdayString -> "SUN" | "MON" | "TUE" | "WED" | "THU" | "FRI" | "SAT" {% convertStringToDayOfWeek %}
+dayOfWeekIncremental -> digits "/" digits {% convertIncrementalFnFactory('dayOfWeek', 8) %}
+
+dayOfWeekRange -> digits "-" digits {% convertRangeFnFactory('dayOfWeek', 8) %}
+
+lastDayOfWeekOfMonth -> digit last
+{% (d) => {
+  const value = Number(d[0]);
+  if (value > 7 || value < 1) {
+    throw new Error("(Day of Week) Day of week value must be between 1-7");
+  }
+  return {
+    mode: 'dayOfWeekBeforeEndOfMonth',
+    value,
+  };
+} %}
+
+nthWeekDayOfMonth -> digit "#" digit
+{% (d) => {
+  const dayValue = Number(d[0]);
+  const nth = Number(d[2]);
+  if (dayValue > 7 || dayValue < 1) {
+    throw new Error(`(Day of Week) Value '${dayValue}#${nth}' is invalid for expression of type 'Nth'. Accepted values 1-7`);
+  }
+  if (nth > 5 || nth < 1) {
+    throw new Error("(Day of Week) A numeric value between 1 and 5 must follow the '#' option");
+  }
+  return {
+    mode: 'nthWeekDayOfMonth',
+    value: [dayValue, nth],
+  };
+} %}
 
 ###################
 #  Year settings  #

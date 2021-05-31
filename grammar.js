@@ -45,10 +45,19 @@ function id(x) { return x[0]; }
     };
   }
 
-  function convertDayOfMapStringSpecifics([d0, d1, d2]) {
+  function convertDayOfWeekSpecifics([d0, d1, d2]) {
+    const valueD0 = (typeof d0[0] === 'string') ? WEEKDAY_MAP[d0[0]] : Number(d0[0][0]);
+    if (Array.isArray(d2.value)) {
+      return {
+        mode: 'specific',
+        value: [valueD0, ...d2.value],
+      };
+    }
+    
+    // else
     return {
       mode: 'specific',
-      value: Array.isArray(d2.value) ? [WEEKDAY_MAP[d0[0]], ...d2.value] : [WEEKDAY_MAP[d0[0]], d2.value],
+      value: [valueD0, d2.value],
     };
   }
 
@@ -85,7 +94,7 @@ function id(x) { return x[0]; }
   }
 
   function convertStringToDayOfWeek(d) {
-    const value = WEEKDAY_MAP[`${d}`];
+    const value = WEEKDAY_MAP[d[0]];
     return { mode: 'specific', value: value };
   }
 
@@ -200,6 +209,8 @@ var grammar = {
     {"name": "hoursRange", "symbols": ["digits", {"literal":"-"}, "digits"], "postprocess": convertRangeFnFactory('Hours', 24)},
     {"name": "dayOfMonth", "symbols": ["_dayOfMonth"], "postprocess": unwrapAndAddScopeName('dayOfMonth')},
     {"name": "_dayOfMonth", "symbols": ["specificDays"]},
+    {"name": "_dayOfMonth", "symbols": ["dayOfMonthIncremental"]},
+    {"name": "_dayOfMonth", "symbols": ["dayOfMonthRange"]},
     {"name": "_dayOfMonth", "symbols": ["every"]},
     {"name": "_dayOfMonth", "symbols": ["noSpecificValue"]},
     {"name": "_dayOfMonth", "symbols": ["lastDayOfMonth"]},
@@ -209,6 +220,8 @@ var grammar = {
     {"name": "specificDays", "symbols": ["specificDay", {"literal":","}, "specificDays"], "postprocess": convertSpecifics},
     {"name": "specificDays", "symbols": ["specificDay"], "postprocess": id},
     {"name": "specificDay", "symbols": ["digits"], "postprocess": convertDigitsToDay},
+    {"name": "dayOfMonthIncremental", "symbols": ["digits", {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('dayOfMonth', 32)},
+    {"name": "dayOfMonthRange", "symbols": ["digits", {"literal":"-"}, "digits"], "postprocess": convertRangeFnFactory('dayOfMonth', 32)},
     {"name": "lastDayOfMonth", "symbols": ["last"], "postprocess": d => ({ mode: 'daysBeforeEndOfMonth', value: 0 })},
     {"name": "lastWeekdayOfMonth", "symbols": ["last", "weekday"], "postprocess": d => ({ mode: 'lastweekDay', value: 0 })},
     {"name": "lastXDaysBeforeEndOfMonth", "symbols": ["last", {"literal":"-"}, "digits"], "postprocess":  d => {
@@ -263,29 +276,58 @@ var grammar = {
     {"name": "monthStrFormat$string$12", "symbols": [{"literal":"D"}, {"literal":"E"}, {"literal":"C"}], "postprocess": function joiner(d) {return d.join('');}},
     {"name": "monthStrFormat", "symbols": ["monthStrFormat$string$12"], "postprocess": d => MONTH_MAP[d]},
     {"name": "dayOfWeek", "symbols": ["_dayOfWeek"], "postprocess": unwrapAndAddScopeName('dayOfWeek')},
-    {"name": "_dayOfWeek", "symbols": ["specificWeekdayDigits"]},
-    {"name": "_dayOfWeek", "symbols": ["specificWeekdaysStrs"]},
+    {"name": "_dayOfWeek", "symbols": ["specificDayOfWeeks"]},
+    {"name": "_dayOfWeek", "symbols": ["dayOfWeekIncremental"]},
+    {"name": "_dayOfWeek", "symbols": ["dayOfWeekRange"]},
+    {"name": "_dayOfWeek", "symbols": ["lastDayOfWeekOfMonth"]},
+    {"name": "_dayOfWeek", "symbols": ["nthWeekDayOfMonth"]},
     {"name": "_dayOfWeek", "symbols": ["every"]},
     {"name": "_dayOfWeek", "symbols": ["noSpecificValue"]},
-    {"name": "specificWeekdayDigits", "symbols": ["specificWeekdayDigit", {"literal":","}, "specificWeekdayDigits"], "postprocess": convertSpecifics},
-    {"name": "specificWeekdayDigits", "symbols": ["specificWeekdayDigit"], "postprocess": id},
-    {"name": "specificWeekdayDigit", "symbols": ["digits"], "postprocess": convertDigitsToDayOfWeek},
-    {"name": "specificWeekdaysStrs", "symbols": ["specificWeekdayString", {"literal":","}, "specificWeekdaysStrs"], "postprocess": convertDayOfMapStringSpecifics},
-    {"name": "specificWeekdaysStrs", "symbols": ["specificWeekdayString"], "postprocess": convertStringToDayOfWeek},
-    {"name": "specificWeekdayString$string$1", "symbols": [{"literal":"S"}, {"literal":"U"}, {"literal":"N"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "specificWeekdayString", "symbols": ["specificWeekdayString$string$1"]},
-    {"name": "specificWeekdayString$string$2", "symbols": [{"literal":"M"}, {"literal":"O"}, {"literal":"N"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "specificWeekdayString", "symbols": ["specificWeekdayString$string$2"]},
-    {"name": "specificWeekdayString$string$3", "symbols": [{"literal":"T"}, {"literal":"U"}, {"literal":"E"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "specificWeekdayString", "symbols": ["specificWeekdayString$string$3"]},
-    {"name": "specificWeekdayString$string$4", "symbols": [{"literal":"W"}, {"literal":"E"}, {"literal":"D"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "specificWeekdayString", "symbols": ["specificWeekdayString$string$4"]},
-    {"name": "specificWeekdayString$string$5", "symbols": [{"literal":"T"}, {"literal":"H"}, {"literal":"U"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "specificWeekdayString", "symbols": ["specificWeekdayString$string$5"]},
-    {"name": "specificWeekdayString$string$6", "symbols": [{"literal":"F"}, {"literal":"R"}, {"literal":"I"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "specificWeekdayString", "symbols": ["specificWeekdayString$string$6"]},
-    {"name": "specificWeekdayString$string$7", "symbols": [{"literal":"S"}, {"literal":"A"}, {"literal":"T"}], "postprocess": function joiner(d) {return d.join('');}},
-    {"name": "specificWeekdayString", "symbols": ["specificWeekdayString$string$7"], "postprocess": convertStringToDayOfWeek},
+    {"name": "specificDayOfWeeks", "symbols": ["specificDayOfWeekDigit", {"literal":","}, "specificDayOfWeeks"], "postprocess": convertDayOfWeekSpecifics},
+    {"name": "specificDayOfWeeks", "symbols": ["specificDayOfWeekString", {"literal":","}, "specificDayOfWeeks"], "postprocess": convertDayOfWeekSpecifics},
+    {"name": "specificDayOfWeeks", "symbols": ["specificDayOfWeekDigit"], "postprocess": convertDigitsToDayOfWeek},
+    {"name": "specificDayOfWeeks", "symbols": ["specificDayOfWeekString"], "postprocess": convertStringToDayOfWeek},
+    {"name": "specificDayOfWeekDigit", "symbols": ["digit"]},
+    {"name": "specificDayOfWeekString$string$1", "symbols": [{"literal":"S"}, {"literal":"U"}, {"literal":"N"}], "postprocess": function joiner(d) {return d.join('');}},
+    {"name": "specificDayOfWeekString", "symbols": ["specificDayOfWeekString$string$1"]},
+    {"name": "specificDayOfWeekString$string$2", "symbols": [{"literal":"M"}, {"literal":"O"}, {"literal":"N"}], "postprocess": function joiner(d) {return d.join('');}},
+    {"name": "specificDayOfWeekString", "symbols": ["specificDayOfWeekString$string$2"]},
+    {"name": "specificDayOfWeekString$string$3", "symbols": [{"literal":"T"}, {"literal":"U"}, {"literal":"E"}], "postprocess": function joiner(d) {return d.join('');}},
+    {"name": "specificDayOfWeekString", "symbols": ["specificDayOfWeekString$string$3"]},
+    {"name": "specificDayOfWeekString$string$4", "symbols": [{"literal":"W"}, {"literal":"E"}, {"literal":"D"}], "postprocess": function joiner(d) {return d.join('');}},
+    {"name": "specificDayOfWeekString", "symbols": ["specificDayOfWeekString$string$4"]},
+    {"name": "specificDayOfWeekString$string$5", "symbols": [{"literal":"T"}, {"literal":"H"}, {"literal":"U"}], "postprocess": function joiner(d) {return d.join('');}},
+    {"name": "specificDayOfWeekString", "symbols": ["specificDayOfWeekString$string$5"]},
+    {"name": "specificDayOfWeekString$string$6", "symbols": [{"literal":"F"}, {"literal":"R"}, {"literal":"I"}], "postprocess": function joiner(d) {return d.join('');}},
+    {"name": "specificDayOfWeekString", "symbols": ["specificDayOfWeekString$string$6"]},
+    {"name": "specificDayOfWeekString$string$7", "symbols": [{"literal":"S"}, {"literal":"A"}, {"literal":"T"}], "postprocess": function joiner(d) {return d.join('');}},
+    {"name": "specificDayOfWeekString", "symbols": ["specificDayOfWeekString$string$7"]},
+    {"name": "dayOfWeekIncremental", "symbols": ["digits", {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('dayOfWeek', 8)},
+    {"name": "dayOfWeekRange", "symbols": ["digits", {"literal":"-"}, "digits"], "postprocess": convertRangeFnFactory('dayOfWeek', 8)},
+    {"name": "lastDayOfWeekOfMonth", "symbols": ["digit", "last"], "postprocess":  (d) => {
+          const value = Number(d[0]);
+          if (value > 7 || value < 1) {
+            throw new Error("(Day of Week) Day of week value must be between 1-7");
+          }
+          return {
+            mode: 'dayOfWeekBeforeEndOfMonth',
+            value,
+          };
+        } },
+    {"name": "nthWeekDayOfMonth", "symbols": ["digit", {"literal":"#"}, "digit"], "postprocess":  (d) => {
+          const dayValue = Number(d[0]);
+          const nth = Number(d[2]);
+          if (dayValue > 7 || dayValue < 1) {
+            throw new Error(`(Day of Week) Value '${dayValue}#${nth}' is invalid for expression of type 'Nth'. Accepted values 1-7`);
+          }
+          if (nth > 5 || nth < 1) {
+            throw new Error("(Day of Week) A numeric value between 1 and 5 must follow the '#' option");
+          }
+          return {
+            mode: 'nthWeekDayOfMonth',
+            value: [dayValue, nth],
+          };
+        } },
     {"name": "years", "symbols": ["_years"], "postprocess": unwrapAndAddScopeName('years')},
     {"name": "_years", "symbols": ["yearsIncremental"]},
     {"name": "_years", "symbols": ["yearsRange"]},
