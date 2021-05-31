@@ -15,25 +15,35 @@ export type QuartzCronField = {
   value: number | number[] | '*' | '?';
 };
 
-export function parse(cronExpression: string): QuartzCronValidationResult {
+export function parse(cronExpression: string, throwErrorDirectly: boolean = false): QuartzCronValidationResult {
   // Create a Parser object from our grammar.
   const parser = new nearley.Parser(nearley.Grammar.fromCompiled(grammar as any));
   try {
     // Parse the cron expression
-    parser.feed(`${cronExpression}`.trim().toUpperCase());
+    const normalizedExpr = `${cronExpression}`.trim().toUpperCase();
+    parser.feed(normalizedExpr);
     // Get result
     const result = parser.results[0];
+
+    // Cron expression should have and only have one of day-of-week and a day-of-month field to be "unspecified (?)"
     let dayFieldSpecifiedCount = 0;
     dayFieldSpecifiedCount += ((result[3].mode !== 'noSpecific') ? 1 : 0);
     dayFieldSpecifiedCount += ((result[5].mode !== 'noSpecific') ? 1 : 0);
-    if (dayFieldSpecifiedCount !== 1) {
+    if (dayFieldSpecifiedCount === 2) {
       throw new Error(`Support for specifying both a day-of-week and a day-of-month value is not complete (you'll need to use the '?' character in one of these fields).`);
+    } else if (dayFieldSpecifiedCount === 0) {
+      throw new Error(`'?' can only be specfied for Day-of-Month -OR- Day-of-Week.`);
     }
+
     return {
       result,
       error: null,
     };
   } catch (e) {
+    if (throwErrorDirectly) {
+      throw e;
+    }
+    // else
     return {
       result: null,
       error: e,
