@@ -135,7 +135,7 @@
     // Example: "5/20" represents: Every 20 seconds starting at second 5
     return (d) => {
       // d: [5, "/", 20]
-      const starting = Number(d[0]);
+      const starting = (d[0] === '*') ? lowerBoundary : Number(d[0]);
       const interval = Number(d[2]);
       if ((starting >= cycleRng) || (starting < lowerBoundary)) {
         throw new Error(`(${fieldType}) Expression '${starting}' is not a valid increment value. Accepted values are ${lowerBoundary}-${cycleRng - 1}`);
@@ -230,7 +230,9 @@ specificSeconds
 
 specificSecond -> digits {% convertDigitsToMinuteOrSecond %}
 
-secondsIncremental -> digits "/" digits {% convertIncrementalFnFactory('Seconds', 60) %}
+secondsIncremental
+  -> digits "/" digits {% convertIncrementalFnFactory('Seconds', 60) %}
+   | "*" "/" digits {% convertIncrementalFnFactory('Seconds', 60) %}
 
 secondsRange -> digits "-" digits {% convertRangeFnFactory('Seconds', 60) %}
 
@@ -248,7 +250,9 @@ specificMinutes
 
 specificMinute -> digits {% convertDigitsToMinuteOrSecond %}
 
-minutesIncremental -> digits "/" digits {% convertIncrementalFnFactory('Minutes', 60) %}
+minutesIncremental
+  -> digits "/" digits {% convertIncrementalFnFactory('Minutes', 60) %}
+   | "*" "/" digits {% convertIncrementalFnFactory('Minutes', 60) %}
 
 minutesRange -> digits "-" digits {% convertRangeFnFactory('Minutes', 60) %}
 
@@ -267,7 +271,9 @@ specificHours
 
 specificHour -> digits {% convertDigitsToHour %}
 
-hoursIncremental -> digits "/" digits {% convertIncrementalFnFactory('Hours', 24) %}
+hoursIncremental
+  -> digits "/" digits {% convertIncrementalFnFactory('Hours', 24) %}
+   | "*" "/" digits   {% convertIncrementalFnFactory('Hours', 24) %}
 
 hoursRange -> digits "-" digits {% convertRangeFnFactory('Hours', 24) %}
 
@@ -285,7 +291,9 @@ specificDays
 
 specificDay -> digits {% convertDigitsToDay %}
 
-dayOfMonthIncremental -> digits "/" digits {% convertIncrementalFnFactory('dayOfMonth', 32) %}
+dayOfMonthIncremental 
+  -> digits "/" digits {% convertIncrementalFnFactory('dayOfMonth', 32, 1) %}
+  | "*" "/" digits {% convertIncrementalFnFactory('dayOfMonth', 32, 1) %}
 
 dayOfMonthRange -> digits "-" digits {% convertRangeFnFactory('dayOfMonth', 32) %}
 
@@ -340,7 +348,9 @@ specificMonthDigit -> digits
 
 specificMonthString -> "JAN" | "FEB" | "MAR" | "APR" | "MAY" | "JUN" | "JUL" | "AUG" | "SEP" | "OCT" | "NOV" | "DEC"
 
-monthIncremental -> digits "/" digits {% convertIncrementalFnFactory('month', 13, 1) %}
+monthIncremental
+  -> digits "/" digits {% convertIncrementalFnFactory('month', 13, 1) %}
+   | "*" "/" digits {% convertIncrementalFnFactory('month', 13, 1) %}
 
 monthRange -> digits "-" digits {% convertRangeFnFactory('month', 13, 1) %}
 
@@ -363,7 +373,9 @@ specificDayOfWeekDigit -> digit
 
 specificDayOfWeekString -> "SUN" | "MON" | "TUE" | "WED" | "THU" | "FRI" | "SAT"
 
-dayOfWeekIncremental -> digits "/" digits {% convertIncrementalFnFactory('dayOfWeek', 8) %}
+dayOfWeekIncremental
+  -> digits "/" digits {% convertIncrementalFnFactory('dayOfWeek', 8, 1) %}
+   | "*" "/" digits {% convertIncrementalFnFactory('dayOfWeek', 8, 1) %}
 
 dayOfWeekRange -> digits "-" digits {% convertRangeFnFactory('dayOfWeek', 8) %}
 
@@ -410,5 +422,6 @@ specificYears
 specificYear -> yearDigits {% convertDigitsToYear %}
 
 yearsIncremental -> yearDigits "/" digits {% convertIncrementalFnFactory('Years', 2099, 1970) %}
+  | "*" "/" digits {% convertIncrementalFnFactory('Years', 2099, 1970) %}
 
-yearsRange -> yearDigits "-" yearDigits {% convertRangeFnFactory('Years', 2099, 1970) %}
+yearsRange -> yearDigits "-" yearDigits {% convertRangeFnFactory('Years', 2100, 1970) %}

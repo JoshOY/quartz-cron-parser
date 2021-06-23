@@ -137,7 +137,7 @@ function id(x) { return x[0]; }
     // Example: "5/20" represents: Every 20 seconds starting at second 5
     return (d) => {
       // d: [5, "/", 20]
-      const starting = Number(d[0]);
+      const starting = (d[0] === '*') ? lowerBoundary : Number(d[0]);
       const interval = Number(d[2]);
       if ((starting >= cycleRng) || (starting < lowerBoundary)) {
         throw new Error(`(${fieldType}) Expression '${starting}' is not a valid increment value. Accepted values are ${lowerBoundary}-${cycleRng - 1}`);
@@ -212,6 +212,7 @@ var grammar = {
     {"name": "specificSeconds", "symbols": ["specificSecond"], "postprocess": id},
     {"name": "specificSecond", "symbols": ["digits"], "postprocess": convertDigitsToMinuteOrSecond},
     {"name": "secondsIncremental", "symbols": ["digits", {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('Seconds', 60)},
+    {"name": "secondsIncremental", "symbols": [{"literal":"*"}, {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('Seconds', 60)},
     {"name": "secondsRange", "symbols": ["digits", {"literal":"-"}, "digits"], "postprocess": convertRangeFnFactory('Seconds', 60)},
     {"name": "minutes", "symbols": ["_minutes"], "postprocess": unwrapAndAddScopeName('minutes')},
     {"name": "_minutes", "symbols": ["specificMinutes"]},
@@ -222,6 +223,7 @@ var grammar = {
     {"name": "specificMinutes", "symbols": ["specificMinute"], "postprocess": id},
     {"name": "specificMinute", "symbols": ["digits"], "postprocess": convertDigitsToMinuteOrSecond},
     {"name": "minutesIncremental", "symbols": ["digits", {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('Minutes', 60)},
+    {"name": "minutesIncremental", "symbols": [{"literal":"*"}, {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('Minutes', 60)},
     {"name": "minutesRange", "symbols": ["digits", {"literal":"-"}, "digits"], "postprocess": convertRangeFnFactory('Minutes', 60)},
     {"name": "hours", "symbols": ["_hours"], "postprocess": unwrapAndAddScopeName('hours')},
     {"name": "_hours", "symbols": ["specificHours"]},
@@ -232,6 +234,7 @@ var grammar = {
     {"name": "specificHours", "symbols": ["specificHour"], "postprocess": id},
     {"name": "specificHour", "symbols": ["digits"], "postprocess": convertDigitsToHour},
     {"name": "hoursIncremental", "symbols": ["digits", {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('Hours', 24)},
+    {"name": "hoursIncremental", "symbols": [{"literal":"*"}, {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('Hours', 24)},
     {"name": "hoursRange", "symbols": ["digits", {"literal":"-"}, "digits"], "postprocess": convertRangeFnFactory('Hours', 24)},
     {"name": "dayOfMonth", "symbols": ["_dayOfMonth"], "postprocess": unwrapAndAddScopeName('dayOfMonth')},
     {"name": "_dayOfMonth", "symbols": ["specificDays"]},
@@ -246,7 +249,8 @@ var grammar = {
     {"name": "specificDays", "symbols": ["specificDay", {"literal":","}, "specificDays"], "postprocess": convertSpecifics},
     {"name": "specificDays", "symbols": ["specificDay"], "postprocess": id},
     {"name": "specificDay", "symbols": ["digits"], "postprocess": convertDigitsToDay},
-    {"name": "dayOfMonthIncremental", "symbols": ["digits", {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('dayOfMonth', 32)},
+    {"name": "dayOfMonthIncremental", "symbols": ["digits", {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('dayOfMonth', 32, 1)},
+    {"name": "dayOfMonthIncremental", "symbols": [{"literal":"*"}, {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('dayOfMonth', 32, 1)},
     {"name": "dayOfMonthRange", "symbols": ["digits", {"literal":"-"}, "digits"], "postprocess": convertRangeFnFactory('dayOfMonth', 32)},
     {"name": "lastDayOfMonth", "symbols": ["last"], "postprocess": d => ({ mode: 'daysBeforeEndOfMonth', value: 0 })},
     {"name": "lastWeekdayOfMonth", "symbols": ["last", "weekday"], "postprocess": d => ({ mode: 'lastweekDay', value: 0 })},
@@ -305,6 +309,7 @@ var grammar = {
     {"name": "specificMonthString$string$12", "symbols": [{"literal":"D"}, {"literal":"E"}, {"literal":"C"}], "postprocess": function joiner(d) {return d.join('');}},
     {"name": "specificMonthString", "symbols": ["specificMonthString$string$12"]},
     {"name": "monthIncremental", "symbols": ["digits", {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('month', 13, 1)},
+    {"name": "monthIncremental", "symbols": [{"literal":"*"}, {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('month', 13, 1)},
     {"name": "monthRange", "symbols": ["digits", {"literal":"-"}, "digits"], "postprocess": convertRangeFnFactory('month', 13, 1)},
     {"name": "dayOfWeek", "symbols": ["_dayOfWeek"], "postprocess": unwrapAndAddScopeName('dayOfWeek')},
     {"name": "_dayOfWeek", "symbols": ["specificDayOfWeeks"]},
@@ -333,7 +338,8 @@ var grammar = {
     {"name": "specificDayOfWeekString", "symbols": ["specificDayOfWeekString$string$6"]},
     {"name": "specificDayOfWeekString$string$7", "symbols": [{"literal":"S"}, {"literal":"A"}, {"literal":"T"}], "postprocess": function joiner(d) {return d.join('');}},
     {"name": "specificDayOfWeekString", "symbols": ["specificDayOfWeekString$string$7"]},
-    {"name": "dayOfWeekIncremental", "symbols": ["digits", {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('dayOfWeek', 8)},
+    {"name": "dayOfWeekIncremental", "symbols": ["digits", {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('dayOfWeek', 8, 1)},
+    {"name": "dayOfWeekIncremental", "symbols": [{"literal":"*"}, {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('dayOfWeek', 8, 1)},
     {"name": "dayOfWeekRange", "symbols": ["digits", {"literal":"-"}, "digits"], "postprocess": convertRangeFnFactory('dayOfWeek', 8)},
     {"name": "lastDayOfWeekOfMonth", "symbols": ["digits", "last"], "postprocess":  (d) => {
           const value = Number(d[0]);
@@ -368,7 +374,8 @@ var grammar = {
     {"name": "specificYears", "symbols": ["specificYear"], "postprocess": id},
     {"name": "specificYear", "symbols": ["yearDigits"], "postprocess": convertDigitsToYear},
     {"name": "yearsIncremental", "symbols": ["yearDigits", {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('Years', 2099, 1970)},
-    {"name": "yearsRange", "symbols": ["yearDigits", {"literal":"-"}, "yearDigits"], "postprocess": convertRangeFnFactory('Years', 2099, 1970)}
+    {"name": "yearsIncremental", "symbols": [{"literal":"*"}, {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('Years', 2099, 1970)},
+    {"name": "yearsRange", "symbols": ["yearDigits", {"literal":"-"}, "yearDigits"], "postprocess": convertRangeFnFactory('Years', 2100, 1970)}
 ]
   , ParserStart: "quartzCronExpr"
 }

@@ -75,7 +75,7 @@ export const parseableCases: Case[] = [
     },
   ],
   [
-    '0-3 1-5 0-23 ? * * 1970-2021',
+    '0-3 1-5 0-23 ? * * 1970-2099',
     {
       error: null,
       result: [
@@ -85,7 +85,7 @@ export const parseableCases: Case[] = [
         { field: 'dayOfMonth', mode: 'noSpecific', value: '?' },
         { field: 'month', mode: 'every', value: '*' },
         { field: 'dayOfWeek', mode: 'every', value: '*' },
-        { field: 'years', mode: 'range', value: [1970,2021] },
+        { field: 'years', mode: 'range', value: [1970,2099] },
       ],
     },
   ],
@@ -130,6 +130,21 @@ export const parseableCases: Case[] = [
         { field: 'dayOfMonth',  mode: 'noSpecific', value: '?' },
         { field: 'month', mode: 'every', value: '*' },
         { field: 'dayOfWeek', mode: 'nthWeekDayOfMonth', value: [1, 2] },
+      ],
+    },
+  ],
+  [
+    '*/2 */3 */4 */5 */6 ? */1',
+    {
+      error: null,
+      result: [
+        { field: 'seconds', mode: 'increment', value: [0,2] },
+        { field: 'minutes', mode: 'increment', value: [0,3] },
+        { field: 'hours', mode: 'increment', value: [0,4] },
+        { field: 'dayOfMonth', mode: 'increment', value: [1,5] },
+        { field: 'month', mode: 'increment', value: [1,6] },
+        { field: 'dayOfWeek', mode: 'noSpecific', value: '?' },
+        { field: 'years', mode: 'increment', value: [1970,1] },
       ],
     },
   ],
