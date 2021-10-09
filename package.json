@@ -1,6 +1,6 @@
 {
   "name": "@joshoy/quartz-cron-parser",
-  "version": "0.1.2",
+  "version": "0.1.4",
   "description": "A quartz cron expression parser",
   "main": "dist/index.js",
   "types": "dist/types/src/index.d.ts",
@@ -23,7 +23,7 @@
   "scripts": {
     "gen-parser": "nearleyc ./src/grammar.ne -o ./src/grammar.js",
     "build": "npm run gen-parser && rimraf ./dist && rollup -c rollup.config.js",
-    "publish": "npm publish --access=public",
+    "release": "npm run build && npm publish --access=public --registry=https://registry.npmjs.org",
     "test": "jest"
   },
   "devDependencies": {
