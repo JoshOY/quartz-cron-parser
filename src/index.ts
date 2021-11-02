@@ -35,6 +35,11 @@ export function parse(cronExpression: string, throwErrorDirectly: boolean = fals
       throw new Error(`'?' can only be specfied for Day-of-Month -OR- Day-of-Week.`);
     }
 
+    // Validate ranges
+    if (result != null) {
+      validateRanges(result);
+    }
+
     return {
       result,
       error: null,
@@ -46,7 +51,7 @@ export function parse(cronExpression: string, throwErrorDirectly: boolean = fals
     // else
     return {
       result: null,
-      error: e,
+      error: e as Error,
     };
   }
 }
@@ -54,4 +59,51 @@ export function parse(cronExpression: string, throwErrorDirectly: boolean = fals
 export function validate(cronExpression: string): boolean {
   const result = parse(cronExpression);
   return result.error == null;
+}
+
+function validateRanges(result: QuartzCronField[]) {
+  // seconds
+  if (result[0] && result[0].mode === 'range') {
+    const value = result[0].value as number[];
+    validateRange('Seconds', value[0], value[1], 0, 59);
+  }
+  // minutes
+  if (result[1] && result[1].mode === 'range') {
+    const value = result[1].value as number[];
+    validateRange('Minutes', value[0], value[1], 0, 59);
+  }
+  // hours
+  if (result[2] && result[2].mode === 'range') {
+    const value = result[2].value as number[];
+    validateRange('Hours', value[0], value[1], 0, 23);
+  }
+  // day of month
+  if (result[3] && result[3].mode === 'range') {
+    const value = result[3].value as number[];
+    validateRange('Day of Month', value[0], value[1], 1, 31);
+  }
+  // months
+  if (result[4] && result[4].mode === 'range') {
+    const value = result[4].value as number[];
+    validateRange('Months', value[0], value[1], 1, 12);
+  }
+  // day of week
+  if (result[5] && result[5].mode === 'range') {
+    const value = result[5].value as number[];
+    validateRange('Day of Week', value[0], value[1], 1, 7);
+  }
+  // years
+  if (result[6] && result[6].mode === 'range') {
+    const value = result[6].value as number[];
+    validateRange('Year', value[0], value[1], 1970, 2099);
+  }
+}
+
+function validateRange(fieldType: string, start: number, end: number, lowerBoundary: number, upperBoundary: number): void {
+  if (start > upperBoundary || start < lowerBoundary || end > upperBoundary || end < lowerBoundary) {
+    throw new Error(`(${fieldType}) Unsupported value '${start}-${end}' for range. Accepted values are ${lowerBoundary}-${upperBoundary}`);
+  }
+  if (start > end) {
+    throw new Error(`(${fieldType}) Unsupported value '${start}-${end}' for range. Accepted values are ${lowerBoundary}-${upperBoundary}`);
+  }
 }

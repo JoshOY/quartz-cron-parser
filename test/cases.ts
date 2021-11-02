@@ -148,4 +148,27 @@ export const parseableCases: Case[] = [
       ],
     },
   ],
+  // https://github.com/JoshOY/quartz-cron-parser/issues/3
+  [
+    '0 20 10-12 * * ? *',
+    {
+      error: null,
+      result: [
+        { field: 'seconds', mode: 'specific', value: 0 },
+        { field: 'minutes', mode: 'specific', value: 20 },
+        { field: 'hours', mode: 'range', value: [10,12] },
+        { field: 'dayOfMonth', mode: 'every', value: '*' },
+        { field: 'month', mode: 'every', value: '*' },
+        { field: 'dayOfWeek', mode: 'noSpecific', value: '?' },
+        { field: 'years', mode: 'every', value: '*' },
+      ],
+    },
+  ],
+  [
+    '0 20 10-33 * * ? *',
+    {
+      error: new Error('(Hours) Unsupported value \'10-33\' for range. Accepted values are 0-23'),
+      result: null,
+    },
+  ],
 ];

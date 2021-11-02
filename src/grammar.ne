@@ -151,15 +151,6 @@
     return (d) => {
       const start = Number(d[0]);
       const end = Number(d[2]);
-      if (start >= cycleRng || end < lowerBoundary) {
-        throw new Error(`(${fieldType}) Unsupported value '${start}-${end}' for range. Accepted values are ${lowerBoundary}-${cycleRng - 1}`);
-      }
-      if (end >= cycleRng || end < lowerBoundary) {
-        throw new Error(`(${fieldType}) Unsupported value '${start}-${end}' for range. Accepted values are ${lowerBoundary}-${cycleRng - 1}`);
-      }
-      if (start > end) {
-        throw new Error(`(${fieldType}) Unsupported value '${start}-${end}' for range. Accepted values are ${lowerBoundary}-${cycleRng - 1}`);
-      }
       return { mode: 'range', value: [start, end] };
     }
   }
