@@ -106,3 +106,5 @@ dist
 # Webstorm
 .idea
 
+# token
+.npmrc
