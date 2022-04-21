@@ -108,6 +108,12 @@ function id(x) { return x[0]; }
     return { mode: 'specific', value: value };
   }
 
+  function convertRangeMonthString(d) {
+    const valueFrom = MONTH_MAP[d[0]];
+    const valueTo = MONTH_MAP[d[2]];
+    return { mode: 'range', value: [valueFrom, valueTo] };
+  }
+
   function convertMonthSpecifics([d0, d1, d2]) {
     const valueD0 = (typeof d0[0] === 'string') ? MONTH_MAP[d0[0]] : Number(d0[0][0]);
     if (Array.isArray(d2.value)) {
@@ -302,6 +308,7 @@ var grammar = {
     {"name": "monthIncremental", "symbols": ["digits", {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('month', 13, 1)},
     {"name": "monthIncremental", "symbols": [{"literal":"*"}, {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('month', 13, 1)},
     {"name": "monthRange", "symbols": ["digits", {"literal":"-"}, "digits"], "postprocess": convertRangeFnFactory('month', 13, 1)},
+    {"name": "monthRange", "symbols": ["specificMonthString", {"literal":"-"}, "specificMonthString"], "postprocess": convertRangeMonthString},
     {"name": "dayOfWeek", "symbols": ["_dayOfWeek"], "postprocess": unwrapAndAddScopeName('dayOfWeek')},
     {"name": "_dayOfWeek", "symbols": ["specificDayOfWeeks"]},
     {"name": "_dayOfWeek", "symbols": ["dayOfWeekIncremental"]},

@@ -47,6 +47,27 @@ export const parseableCases: Case[] = [
     },
   ],
   [
+    '0 0 12 ? JAN-JUN *',
+    {
+      error: null,
+      result: [
+        { field: 'seconds', mode: 'specific', value: 0 },
+        { field: 'minutes', mode: 'specific', value: 0 },
+        { field: 'hours', mode: 'specific', value: 12 },
+        { field: 'dayOfMonth', mode: 'noSpecific', value: '?' },
+        { field: 'month', mode: 'range', value: [1,6] },
+        { field: 'dayOfWeek', mode: 'every', value: '*' },
+      ],
+    },
+  ],
+  [
+    '0 0 12 ? JUN-FEB *',
+    {
+      error: new Error('(Months) Unsupported value \'6-2\' for range. Accepted values are 1-12'),
+      result: null,
+    }
+  ],
+  [
     '0 0,30 2,1 ? DEC *',
     {
       error: null,

@@ -106,6 +106,12 @@
     return { mode: 'specific', value: value };
   }
 
+  function convertRangeMonthString(d) {
+    const valueFrom = MONTH_MAP[d[0]];
+    const valueTo = MONTH_MAP[d[2]];
+    return { mode: 'range', value: [valueFrom, valueTo] };
+  }
+
   function convertMonthSpecifics([d0, d1, d2]) {
     const valueD0 = (typeof d0[0] === 'string') ? MONTH_MAP[d0[0]] : Number(d0[0][0]);
     if (Array.isArray(d2.value)) {
@@ -343,7 +349,9 @@ monthIncremental
   -> digits "/" digits {% convertIncrementalFnFactory('month', 13, 1) %}
    | "*" "/" digits {% convertIncrementalFnFactory('month', 13, 1) %}
 
-monthRange -> digits "-" digits {% convertRangeFnFactory('month', 13, 1) %}
+monthRange
+ ->  digits "-" digits  {% convertRangeFnFactory('month', 13, 1) %}
+  |  specificMonthString "-" specificMonthString {% convertRangeMonthString %}
 
 ##########################
 #  Day of week settings  #
