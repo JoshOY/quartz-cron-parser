@@ -112,6 +112,12 @@
     return { mode: 'range', value: [valueFrom, valueTo] };
   }
 
+  function convertRangeDayOfWeekString(d) {
+    const valueFrom = WEEKDAY_MAP[d[0]];
+    const valueTo = WEEKDAY_MAP[d[2]];
+    return { mode: 'range', value: [valueFrom, valueTo] };
+  }
+
   function convertMonthSpecifics([d0, d1, d2]) {
     const valueD0 = (typeof d0[0] === 'string') ? MONTH_MAP[d0[0]] : Number(d0[0][0]);
     if (Array.isArray(d2.value)) {
@@ -376,7 +382,9 @@ dayOfWeekIncremental
   -> digits "/" digits {% convertIncrementalFnFactory('dayOfWeek', 8, 1) %}
    | "*" "/" digits {% convertIncrementalFnFactory('dayOfWeek', 8, 1) %}
 
-dayOfWeekRange -> digits "-" digits {% convertRangeFnFactory('dayOfWeek', 8) %}
+dayOfWeekRange
+  -> digits "-" digits {% convertRangeFnFactory('dayOfWeek', 8) %}
+   |  specificDayOfWeekString "-" specificDayOfWeekString {% convertRangeDayOfWeekString %}
 
 lastDayOfWeekOfMonth -> digits last
 {% (d) => {
