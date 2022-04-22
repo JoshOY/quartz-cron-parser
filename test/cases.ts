@@ -68,6 +68,34 @@ export const parseableCases: Case[] = [
     }
   ],
   [
+    '0 0 12 ? * MON,SAT',
+    {
+      error: null,
+      result: [
+        { field: 'seconds', mode: 'specific', value: 0 },
+        { field: 'minutes', mode: 'specific', value: 0 },
+        { field: 'hours', mode: 'specific', value: 12 },
+        { field: 'dayOfMonth', mode: 'noSpecific', value: '?' },
+        { field: 'month', mode: 'every', value: '*' },
+        { field: 'dayOfWeek', mode: 'specific', value: [2,7] },  // Day of week starts at Sunday = 1
+      ],
+    },
+  ],
+  [
+    '0 0 12 ? * TUE-FRI',
+    {
+      error: null,
+      result: [
+        { field: 'seconds', mode: 'specific', value: 0 },
+        { field: 'minutes', mode: 'specific', value: 0 },
+        { field: 'hours', mode: 'specific', value: 12 },
+        { field: 'dayOfMonth', mode: 'noSpecific', value: '?' },
+        { field: 'month', mode: 'every', value: '*' },
+        { field: 'dayOfWeek', mode: 'range', value: [3, 6] },  // Day of week starts at Sunday = 1
+      ],
+    },
+  ],
+  [
     '0 0,30 2,1 ? DEC *',
     {
       error: null,

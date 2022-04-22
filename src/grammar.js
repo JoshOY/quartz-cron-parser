@@ -114,6 +114,12 @@ function id(x) { return x[0]; }
     return { mode: 'range', value: [valueFrom, valueTo] };
   }
 
+  function convertRangeDayOfWeekString(d) {
+    const valueFrom = WEEKDAY_MAP[d[0]];
+    const valueTo = WEEKDAY_MAP[d[2]];
+    return { mode: 'range', value: [valueFrom, valueTo] };
+  }
+
   function convertMonthSpecifics([d0, d1, d2]) {
     const valueD0 = (typeof d0[0] === 'string') ? MONTH_MAP[d0[0]] : Number(d0[0][0]);
     if (Array.isArray(d2.value)) {
@@ -339,6 +345,7 @@ var grammar = {
     {"name": "dayOfWeekIncremental", "symbols": ["digits", {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('dayOfWeek', 8, 1)},
     {"name": "dayOfWeekIncremental", "symbols": [{"literal":"*"}, {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('dayOfWeek', 8, 1)},
     {"name": "dayOfWeekRange", "symbols": ["digits", {"literal":"-"}, "digits"], "postprocess": convertRangeFnFactory('dayOfWeek', 8)},
+    {"name": "dayOfWeekRange", "symbols": ["specificDayOfWeekString", {"literal":"-"}, "specificDayOfWeekString"], "postprocess": convertRangeDayOfWeekString},
     {"name": "lastDayOfWeekOfMonth", "symbols": ["digits", "last"], "postprocess":  (d) => {
           const value = Number(d[0]);
           if (value > 7 || value < 1) {
