@@ -100,6 +100,9 @@ function id(x) { return x[0]; }
 
   function convertDigitsToMonth(d) {
     const value = Number(d);
+    if (value < 1 || value > 12) {
+        throw new Error("Month must be between 1 and 12");
+    }
     return { mode: 'specific', value: value };
   }
 
