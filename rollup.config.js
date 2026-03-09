@@ -1,16 +1,20 @@
 // rollup.config.js
-import path from 'path';
+import { fileURLToPath } from 'url';
+import path, { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 import typescript from 'rollup-plugin-typescript2';
 import commonjs from '@rollup/plugin-commonjs';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
-import { terser } from 'rollup-plugin-terser';
+import terser from '@rollup/plugin-terser';
 
 
 const commonPlugins = [typescript({
   include: [
     './src/**/*.ts',
   ],
-  rollupCommonJSResolveHack: true,
   tsconfig: path.resolve(__dirname, './tsconfig.json'),
   useTsconfigDeclarationDir: true,
 }), commonjs(), nodeResolve()];
