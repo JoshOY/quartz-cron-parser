@@ -15,6 +15,12 @@ export type QuartzCronField = {
   value: number | number[] | '*' | '?';
 };
 
+type ParsedCronField = QuartzCronField | {
+  field: QuartzCronField['field'];
+  mode: 'list';
+  value: Pick<QuartzCronField, 'mode' | 'value'>[];
+};
+
 export function parse(cronExpression: string, throwErrorDirectly: boolean = false): QuartzCronValidationResult {
   // Create a Parser object from our grammar.
   const parser = new nearley.Parser(nearley.Grammar.fromCompiled(grammar as any));
@@ -41,7 +47,7 @@ export function parse(cronExpression: string, throwErrorDirectly: boolean = fals
     }
 
     return {
-      result,
+      result: normalizeLists(result),
       error: null,
     };
   } catch (e) {
@@ -61,42 +67,48 @@ export function validate(cronExpression: string): boolean {
   return result.error == null;
 }
 
-function validateRanges(result: QuartzCronField[]) {
-  // seconds
-  if (result[0] && result[0].mode === 'range') {
-    const value = result[0].value as number[];
-    validateRange('Seconds', value[0], value[1], 0, 59);
-  }
-  // minutes
-  if (result[1] && result[1].mode === 'range') {
-    const value = result[1].value as number[];
-    validateRange('Minutes', value[0], value[1], 0, 59);
-  }
-  // hours
-  if (result[2] && result[2].mode === 'range') {
-    const value = result[2].value as number[];
-    validateRange('Hours', value[0], value[1], 0, 23);
-  }
-  // day of month
-  if (result[3] && result[3].mode === 'range') {
-    const value = result[3].value as number[];
-    validateRange('Day of Month', value[0], value[1], 1, 31);
-  }
-  // months
-  if (result[4] && result[4].mode === 'range') {
-    const value = result[4].value as number[];
-    validateRange('Months', value[0], value[1], 1, 12);
-  }
-  // day of week
-  if (result[5] && result[5].mode === 'range') {
-    const value = result[5].value as number[];
-    validateRange('Day of Week', value[0], value[1], 1, 7);
-  }
-  // years
-  if (result[6] && result[6].mode === 'range') {
-    const value = result[6].value as number[];
-    validateRange('Year', value[0], value[1], 1970, 2099);
-  }
+function validateRanges(result: ParsedCronField[]) {
+  const bounds: [string, number, number][] = [
+    ['Seconds', 0, 59],
+    ['Minutes', 0, 59],
+    ['Hours', 0, 23],
+    ['Day of Month', 1, 31],
+    ['Months', 1, 12],
+    ['Day of Week', 1, 7],
+    ['Year', 1970, 2099],
+  ];
+  result.forEach((field, index) => {
+    const items = field.mode === 'list' ? field.value : [field];
+    items.forEach(item => {
+      if (item.mode === 'range') {
+        const [start, end] = item.value as number[];
+        const [name, lower, upper] = bounds[index];
+        validateRange(name, start, end, lower, upper);
+      }
+    });
+  });
+}
+
+// Expand only lists; standalone ranges retain their existing public representation.
+// Called after validation so invalid or reversed ranges cannot disappear during expansion.
+function normalizeLists(result: ParsedCronField[]): QuartzCronField[] {
+  return result.map(field => {
+    if (field.mode !== 'list') {
+      return field;
+    }
+    const value: number[] = [];
+    field.value.forEach(item => {
+      if (item.mode === 'range') {
+        const [start, end] = item.value as number[];
+        for (let current = start; current <= end; current++) {
+          value.push(current);
+        }
+      } else {
+        value.push(item.value as number);
+      }
+    });
+    return { field: field.field, mode: 'specific', value };
+  });
 }
 
 function validateRange(fieldType: string, start: number, end: number, lowerBoundary: number, upperBoundary: number): void {
