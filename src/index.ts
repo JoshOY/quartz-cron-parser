@@ -11,7 +11,7 @@ export type QuartzCronValidationResult = {
 
 export type QuartzCronField = {
   field: 'seconds' | 'minutes' | 'hours' | 'dayOfMonth' | 'month' | 'dayOfWeek' | 'years';
-  mode: 'every' | 'noSpecific' | 'specific' | 'increment' | 'range' | 'daysBeforeEndOfMonth' | 'lastweekDay' | 'nearestWeekdayOfMonth' | 'nthWeekDayOfMonth',
+  mode: 'every' | 'noSpecific' | 'specific' | 'increment' | 'range' | 'daysBeforeEndOfMonth' | 'lastweekDay' | 'nearestWeekdayOfMonth' | 'dayOfWeekBeforeEndOfMonth' | 'nthWeekDayOfMonth',
   value: number | number[] | '*' | '?';
 };
 

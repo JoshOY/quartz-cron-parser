@@ -183,6 +183,51 @@ export const parseableCases: Case[] = [
     },
   ],
   [
+    // Every two days of the week, starting on Friday
+    '* * * ? * FRI/2',
+    {
+      error: null,
+      result: [
+        { field: 'seconds', mode: 'every', value: '*' },
+        { field: 'minutes', mode: 'every', value: '*' },
+        { field: 'hours', mode: 'every', value: '*' },
+        { field: 'dayOfMonth', mode: 'noSpecific', value: '?' },
+        { field: 'month', mode: 'every', value: '*' },
+        { field: 'dayOfWeek', mode: 'increment', value: [6, 2] },
+      ],
+    },
+  ],
+  [
+    // The last Friday of the month
+    '* * * ? * FRIL',
+    {
+      error: null,
+      result: [
+        { field: 'seconds', mode: 'every', value: '*' },
+        { field: 'minutes', mode: 'every', value: '*' },
+        { field: 'hours', mode: 'every', value: '*' },
+        { field: 'dayOfMonth', mode: 'noSpecific', value: '?' },
+        { field: 'month', mode: 'every', value: '*' },
+        { field: 'dayOfWeek', mode: 'dayOfWeekBeforeEndOfMonth', value: 6 },
+      ],
+    },
+  ],
+  [
+    // The third Friday of the month
+    '* * * ? * FRI#3',
+    {
+      error: null,
+      result: [
+        { field: 'seconds', mode: 'every', value: '*' },
+        { field: 'minutes', mode: 'every', value: '*' },
+        { field: 'hours', mode: 'every', value: '*' },
+        { field: 'dayOfMonth', mode: 'noSpecific', value: '?' },
+        { field: 'month', mode: 'every', value: '*' },
+        { field: 'dayOfWeek', mode: 'nthWeekDayOfMonth', value: [6, 3] },
+      ],
+    },
+  ],
+  [
     '*/2 */3 */4 */5 */6 ? */1',
     {
       error: null,

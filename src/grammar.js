@@ -82,6 +82,42 @@ function id(x) { return x[0]; }
     return { mode: 'specific', value: value };
   }
 
+  function convertDayOfWeekValue(d) {
+    const value = Array.isArray(d) ? d[0] : d;
+    return WEEKDAY_MAP[value] || Number(value);
+  }
+
+  function convertDayOfWeekIncremental(d) {
+    const starting = d[0] === '*' ? '*' : convertDayOfWeekValue(d[0]);
+    return convertIncrementalFnFactory('dayOfWeek', 8, 1)([starting, d[1], d[2]]);
+  }
+
+  function convertLastDayOfWeekOfMonth(d) {
+    const value = convertDayOfWeekValue(d[0]);
+    if (value > 7 || value < 1) {
+      throw new Error("(Day of Week) Day of week value must be between 1-7");
+    }
+    return {
+      mode: 'dayOfWeekBeforeEndOfMonth',
+      value,
+    };
+  }
+
+  function convertNthWeekDayOfMonth(d) {
+    const dayValue = convertDayOfWeekValue(d[0]);
+    const nth = Number(d[2]);
+    if (dayValue > 7 || dayValue < 1) {
+      throw new Error(`(Day of Week) Value '${dayValue}#${nth}' is invalid for expression of type 'Nth'. Accepted values 1-7`);
+    }
+    if (nth > 5 || nth < 1) {
+      throw new Error("(Day of Week) A numeric value between 1 and 5 must follow the '#' option");
+    }
+    return {
+      mode: 'nthWeekDayOfMonth',
+      value: [dayValue, nth],
+    };
+  }
+
   function convertDayOfWeekSpecifics([d0, d1, d2]) {
     const valueD0 = (typeof d0[0] === 'string') ? WEEKDAY_MAP[d0[0]] : Number(d0[0][0]);
     if (Array.isArray(d2.value)) {
@@ -101,7 +137,7 @@ function id(x) { return x[0]; }
   function convertDigitsToMonth(d) {
     const value = Number(d);
     if (value < 1 || value > 12) {
-        throw new Error("Month must be between 1 and 12");
+      throw new Error("Month must be between 1 and 12");
     }
     return { mode: 'specific', value: value };
   }
@@ -345,34 +381,15 @@ var grammar = {
     {"name": "specificDayOfWeekString", "symbols": ["specificDayOfWeekString$string$6"]},
     {"name": "specificDayOfWeekString$string$7", "symbols": [{"literal":"S"}, {"literal":"A"}, {"literal":"T"}], "postprocess": function joiner(d) {return d.join('');}},
     {"name": "specificDayOfWeekString", "symbols": ["specificDayOfWeekString$string$7"]},
-    {"name": "dayOfWeekIncremental", "symbols": ["digits", {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('dayOfWeek', 8, 1)},
-    {"name": "dayOfWeekIncremental", "symbols": [{"literal":"*"}, {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('dayOfWeek', 8, 1)},
+    {"name": "dayOfWeekIncremental", "symbols": ["digits", {"literal":"/"}, "digits"], "postprocess": convertDayOfWeekIncremental},
+    {"name": "dayOfWeekIncremental", "symbols": ["specificDayOfWeekString", {"literal":"/"}, "digits"], "postprocess": convertDayOfWeekIncremental},
+    {"name": "dayOfWeekIncremental", "symbols": [{"literal":"*"}, {"literal":"/"}, "digits"], "postprocess": convertDayOfWeekIncremental},
     {"name": "dayOfWeekRange", "symbols": ["digits", {"literal":"-"}, "digits"], "postprocess": convertRangeFnFactory('dayOfWeek', 8)},
     {"name": "dayOfWeekRange", "symbols": ["specificDayOfWeekString", {"literal":"-"}, "specificDayOfWeekString"], "postprocess": convertRangeDayOfWeekString},
-    {"name": "lastDayOfWeekOfMonth", "symbols": ["digits", "last"], "postprocess":  (d) => {
-          const value = Number(d[0]);
-          if (value > 7 || value < 1) {
-            throw new Error("(Day of Week) Day of week value must be between 1-7");
-          }
-          return {
-            mode: 'dayOfWeekBeforeEndOfMonth',
-            value,
-          };
-        } },
-    {"name": "nthWeekDayOfMonth", "symbols": ["digits", {"literal":"#"}, "digits"], "postprocess":  (d) => {
-          const dayValue = Number(d[0]);
-          const nth = Number(d[2]);
-          if (dayValue > 7 || dayValue < 1) {
-            throw new Error(`(Day of Week) Value '${dayValue}#${nth}' is invalid for expression of type 'Nth'. Accepted values 1-7`);
-          }
-          if (nth > 5 || nth < 1) {
-            throw new Error("(Day of Week) A numeric value between 1 and 5 must follow the '#' option");
-          }
-          return {
-            mode: 'nthWeekDayOfMonth',
-            value: [dayValue, nth],
-          };
-        } },
+    {"name": "lastDayOfWeekOfMonth", "symbols": ["digits", "last"], "postprocess": convertLastDayOfWeekOfMonth},
+    {"name": "lastDayOfWeekOfMonth", "symbols": ["specificDayOfWeekString", "last"], "postprocess": convertLastDayOfWeekOfMonth},
+    {"name": "nthWeekDayOfMonth", "symbols": ["digits", {"literal":"#"}, "digits"], "postprocess": convertNthWeekDayOfMonth},
+    {"name": "nthWeekDayOfMonth", "symbols": ["specificDayOfWeekString", {"literal":"#"}, "digits"], "postprocess": convertNthWeekDayOfMonth},
     {"name": "years", "symbols": ["_years"], "postprocess": unwrapAndAddScopeName('years')},
     {"name": "_years", "symbols": ["yearsIncremental"]},
     {"name": "_years", "symbols": ["yearsRange"]},

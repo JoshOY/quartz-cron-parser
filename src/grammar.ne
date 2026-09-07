@@ -80,6 +80,42 @@
     return { mode: 'specific', value: value };
   }
 
+  function convertDayOfWeekValue(d) {
+    const value = Array.isArray(d) ? d[0] : d;
+    return WEEKDAY_MAP[value] || Number(value);
+  }
+
+  function convertDayOfWeekIncremental(d) {
+    const starting = d[0] === '*' ? '*' : convertDayOfWeekValue(d[0]);
+    return convertIncrementalFnFactory('dayOfWeek', 8, 1)([starting, d[1], d[2]]);
+  }
+
+  function convertLastDayOfWeekOfMonth(d) {
+    const value = convertDayOfWeekValue(d[0]);
+    if (value > 7 || value < 1) {
+      throw new Error("(Day of Week) Day of week value must be between 1-7");
+    }
+    return {
+      mode: 'dayOfWeekBeforeEndOfMonth',
+      value,
+    };
+  }
+
+  function convertNthWeekDayOfMonth(d) {
+    const dayValue = convertDayOfWeekValue(d[0]);
+    const nth = Number(d[2]);
+    if (dayValue > 7 || dayValue < 1) {
+      throw new Error(`(Day of Week) Value '${dayValue}#${nth}' is invalid for expression of type 'Nth'. Accepted values 1-7`);
+    }
+    if (nth > 5 || nth < 1) {
+      throw new Error("(Day of Week) A numeric value between 1 and 5 must follow the '#' option");
+    }
+    return {
+      mode: 'nthWeekDayOfMonth',
+      value: [dayValue, nth],
+    };
+  }
+
   function convertDayOfWeekSpecifics([d0, d1, d2]) {
     const valueD0 = (typeof d0[0] === 'string') ? WEEKDAY_MAP[d0[0]] : Number(d0[0][0]);
     if (Array.isArray(d2.value)) {
@@ -382,40 +418,21 @@ specificDayOfWeekDigit -> digit
 specificDayOfWeekString -> "SUN" | "MON" | "TUE" | "WED" | "THU" | "FRI" | "SAT"
 
 dayOfWeekIncremental
-  -> digits "/" digits {% convertIncrementalFnFactory('dayOfWeek', 8, 1) %}
-   | "*" "/" digits {% convertIncrementalFnFactory('dayOfWeek', 8, 1) %}
+  -> digits "/" digits {% convertDayOfWeekIncremental %}
+   | specificDayOfWeekString "/" digits {% convertDayOfWeekIncremental %}
+   | "*" "/" digits {% convertDayOfWeekIncremental %}
 
 dayOfWeekRange
   -> digits "-" digits {% convertRangeFnFactory('dayOfWeek', 8) %}
    |  specificDayOfWeekString "-" specificDayOfWeekString {% convertRangeDayOfWeekString %}
 
-lastDayOfWeekOfMonth -> digits last
-{% (d) => {
-  const value = Number(d[0]);
-  if (value > 7 || value < 1) {
-    throw new Error("(Day of Week) Day of week value must be between 1-7");
-  }
-  return {
-    mode: 'dayOfWeekBeforeEndOfMonth',
-    value,
-  };
-} %}
+lastDayOfWeekOfMonth
+  -> digits last {% convertLastDayOfWeekOfMonth %}
+   | specificDayOfWeekString last {% convertLastDayOfWeekOfMonth %}
 
-nthWeekDayOfMonth -> digits "#" digits
-{% (d) => {
-  const dayValue = Number(d[0]);
-  const nth = Number(d[2]);
-  if (dayValue > 7 || dayValue < 1) {
-    throw new Error(`(Day of Week) Value '${dayValue}#${nth}' is invalid for expression of type 'Nth'. Accepted values 1-7`);
-  }
-  if (nth > 5 || nth < 1) {
-    throw new Error("(Day of Week) A numeric value between 1 and 5 must follow the '#' option");
-  }
-  return {
-    mode: 'nthWeekDayOfMonth',
-    value: [dayValue, nth],
-  };
-} %}
+nthWeekDayOfMonth
+  -> digits "#" digits {% convertNthWeekDayOfMonth %}
+   | specificDayOfWeekString "#" digits {% convertNthWeekDayOfMonth %}
 
 ###################
 #  Year settings  #
