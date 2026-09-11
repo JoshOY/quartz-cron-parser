@@ -23,12 +23,26 @@ yarn add @joshoy/quartz-cron-parser
 
 ## Basic usage
 
+The package supports ES modules and CommonJS.
+
+Use an ES module import:
+
+```javascript
+import { parse, validate } from '@joshoy/quartz-cron-parser';
+```
+
+Or use CommonJS:
+
+```javascript
+const { parse, validate } = require('@joshoy/quartz-cron-parser');
+```
+
 ### Validate an expression
 
 Use `validate()` when you only need a Boolean result.
 
 ```javascript
-const { validate } = require('@joshoy/quartz-cron-parser');
+import { validate } from '@joshoy/quartz-cron-parser';
 
 validate('0 0 12 ? * MON-FRI'); // true
 validate('0 0 12 * * MON');     // false
@@ -42,7 +56,7 @@ Set the day-of-month field or the day-of-week field to `?`.
 Use `parse()` when you need the value and mode of each field.
 
 ```javascript
-const { parse } = require('@joshoy/quartz-cron-parser');
+import { parse } from '@joshoy/quartz-cron-parser';
 
 const parsed = parse('0 0 12 ? * MON-FRI');
 
@@ -66,7 +80,7 @@ The result has this structure:
 ]
 ```
 
-The package includes TypeScript declarations. You can also use named imports:
+The package includes TypeScript declarations:
 
 ```typescript
 import { parse, validate } from '@joshoy/quartz-cron-parser';

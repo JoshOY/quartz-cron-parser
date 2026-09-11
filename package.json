@@ -2,8 +2,18 @@
   "name": "@joshoy/quartz-cron-parser",
   "version": "0.1.10",
   "description": "A quartz cron expression parser",
-  "main": "dist/index.js",
-  "types": "dist/types/src/index.d.ts",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/types/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/src/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./dist/*": "./dist/*",
+    "./package.json": "./package.json"
+  },
   "repository": "git@github.com:JoshOY/quartz-cron-parser.git",
   "author": "Josh Ouyang <me@joshoy.org>",
   "packageManager": "yarn@1.22.22",
@@ -18,6 +28,7 @@
     "dist/types/src/grammar.d.ts",
     "dist/types/src/index.d.ts",
     "dist/index.js",
+    "dist/index.mjs",
     "dist/index.min.js"
   ],
   "license": "MIT",
@@ -25,7 +36,8 @@
     "gen-parser": "nearleyc ./src/grammar.ne -o ./src/grammar.js",
     "build": "npm run gen-parser && rimraf ./dist && rollup -c rollup.config.mjs",
     "release": "npm run build && npm publish --access=public --registry=https://registry.npmjs.org",
-    "test": "jest"
+    "test": "jest",
+    "test:exports": "node test/exports.cjs && node test/exports.mjs"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^29.0.3",

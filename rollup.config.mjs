@@ -1,4 +1,4 @@
-// rollup.config.js
+// rollup.config.mjs
 import path from 'path';
 import { fileURLToPath } from 'url';
 import commonjs from '@rollup/plugin-commonjs';
@@ -26,6 +26,10 @@ export default {
     {
       file: path.resolve(currentDirectory, './dist/index.js'),
       format: 'cjs',
+    },
+    {
+      file: path.resolve(currentDirectory, './dist/index.mjs'),
+      format: 'es',
     },
     {
       file: path.resolve(currentDirectory, './dist/index.min.js'),
