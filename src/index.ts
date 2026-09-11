@@ -9,17 +9,29 @@ export type QuartzCronValidationResult = {
     error: Error;
 };
 
-export type QuartzCronField = {
-  field: 'seconds' | 'minutes' | 'hours' | 'dayOfMonth' | 'month' | 'dayOfWeek' | 'years';
-  mode: 'every' | 'noSpecific' | 'specific' | 'increment' | 'range' | 'daysBeforeEndOfMonth' | 'lastweekDay' | 'nearestWeekdayOfMonth' | 'dayOfWeekBeforeEndOfMonth' | 'nthWeekDayOfMonth',
+export type QuartzCronListItem = {
+  mode: 'every' | 'noSpecific' | 'specific' | 'increment' | 'range' | 'rangeIncrement' | 'daysBeforeEndOfMonth' | 'lastweekDay' | 'nearestWeekdayOfMonth' | 'dayOfWeekBeforeEndOfMonth' | 'nthWeekDayOfMonth',
   value: number | number[] | '*' | '?';
 };
 
-type ParsedCronField = QuartzCronField | {
-  field: QuartzCronField['field'];
+export type QuartzCronField = {
+  field: 'seconds' | 'minutes' | 'hours' | 'dayOfMonth' | 'month' | 'dayOfWeek' | 'years';
+} & (QuartzCronListItem | {
   mode: 'list';
-  value: Pick<QuartzCronField, 'mode' | 'value'>[];
-};
+  value: QuartzCronListItem[];
+});
+
+type ParsedCronField = QuartzCronField;
+
+const FIELD_BOUNDS: readonly (readonly [string, number, number])[] = [
+  ['Seconds', 0, 59],
+  ['Minutes', 0, 59],
+  ['Hours', 0, 23],
+  ['Day of Month', 1, 31],
+  ['Months', 1, 12],
+  ['Day of Week', 1, 7],
+  ['Year', 1970, 2099],
+];
 
 export function parse(cronExpression: string, throwErrorDirectly: boolean = false): QuartzCronValidationResult {
   // Create a Parser object from our grammar.
@@ -68,21 +80,12 @@ export function validate(cronExpression: string): boolean {
 }
 
 function validateRanges(result: ParsedCronField[]) {
-  const bounds: [string, number, number][] = [
-    ['Seconds', 0, 59],
-    ['Minutes', 0, 59],
-    ['Hours', 0, 23],
-    ['Day of Month', 1, 31],
-    ['Months', 1, 12],
-    ['Day of Week', 1, 7],
-    ['Year', 1970, 2099],
-  ];
   result.forEach((field, index) => {
     const items = field.mode === 'list' ? field.value : [field];
     items.forEach(item => {
-      if (item.mode === 'range') {
+      if (item.mode === 'range' || item.mode === 'rangeIncrement') {
         const [start, end] = item.value as number[];
-        const [name, lower, upper] = bounds[index];
+        const [name, lower, upper] = FIELD_BOUNDS[index];
         validateRange(name, start, end, lower, upper);
       }
     });
@@ -90,32 +93,77 @@ function validateRanges(result: ParsedCronField[]) {
 }
 
 // Expand only lists; standalone ranges retain their existing public representation.
-// Called after validation so invalid or reversed ranges cannot disappear during expansion.
+// Called after validation so an overflowing range can wrap safely within its field bounds.
 function normalizeLists(result: ParsedCronField[]): QuartzCronField[] {
-  return result.map(field => {
+  return result.map((field, index) => {
     if (field.mode !== 'list') {
       return field;
     }
-    const value: number[] = [];
+    const [, lower, upper] = FIELD_BOUNDS[index];
+    const value: QuartzCronListItem[] = [];
     field.value.forEach(item => {
       if (item.mode === 'range') {
         const [start, end] = item.value as number[];
-        for (let current = start; current <= end; current++) {
-          value.push(current);
-        }
+        value.push(...toSpecificItems(expandRange(start, end, lower, upper)));
+      } else if (item.mode === 'rangeIncrement') {
+        const [start, end, interval] = item.value as number[];
+        value.push(...toSpecificItems(expandRangeIncrement(start, end, interval, lower, upper)));
+      } else if (item.mode === 'increment') {
+        const [start, interval] = item.value as number[];
+        value.push(...toSpecificItems(expandIncrement(start, interval, upper)));
       } else {
-        value.push(item.value as number);
+        value.push(item);
       }
     });
-    return { field: field.field, mode: 'specific', value };
+    if (value.every(item => item.mode === 'specific')) {
+      return { field: field.field, mode: 'specific', value: value.map(item => item.value as number) };
+    }
+    return { field: field.field, mode: 'list', value };
   });
+}
+
+function toSpecificItems(values: number[]): QuartzCronListItem[] {
+  return values.map(value => ({ mode: 'specific', value }));
+}
+
+function expandRange(start: number, end: number, lowerBoundary: number, upperBoundary: number): number[] {
+  const value: number[] = [];
+  let current = start;
+  while (true) {
+    value.push(current);
+    if (current === end) {
+      return value;
+    }
+    current = current === upperBoundary ? lowerBoundary : current + 1;
+  }
+}
+
+function expandIncrement(start: number, interval: number, upperBoundary: number): number[] {
+  if (interval === 0) {
+    return [start];
+  }
+  const value: number[] = [];
+  for (let current = start; current <= upperBoundary; current += interval) {
+    value.push(current);
+  }
+  return value;
+}
+
+function expandRangeIncrement(
+  start: number,
+  end: number,
+  interval: number,
+  lowerBoundary: number,
+  upperBoundary: number,
+): number[] {
+  if (interval === 0) {
+    return [start];
+  }
+  return expandRange(start, end, lowerBoundary, upperBoundary).filter((_, index) => index % interval === 0);
 }
 
 function validateRange(fieldType: string, start: number, end: number, lowerBoundary: number, upperBoundary: number): void {
   if (start > upperBoundary || start < lowerBoundary || end > upperBoundary || end < lowerBoundary) {
-    throw new Error(`(${fieldType}) Unsupported value '${start}-${end}' for range. Accepted values are ${lowerBoundary}-${upperBoundary}`);
-  }
-  if (start > end) {
     throw new Error(`(${fieldType}) Unsupported value '${start}-${end}' for range. Accepted values are ${lowerBoundary}-${upperBoundary}`);
   }
 }

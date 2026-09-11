@@ -89,6 +89,7 @@ import { parse, validate } from '@joshoy/quartz-cron-parser';
 ## Quartz cron format
 
 An expression has six required fields and one optional year field.
+Separate fields with one or more spaces or tabs.
 
 ```text
 ┌──────────── second (0-59)
@@ -114,17 +115,23 @@ Set exactly one of the day-of-month and day-of-week fields to `?`.
 | `*` | Match every value. |
 | `?` | Leave the day-of-month or day-of-week field unspecified. |
 | `,` | Separate items in a list, for example `MON,WED,FRI`. |
-| `-` | Define a range, for example `MON-FRI`. |
-| `/` | Define an increment, for example `0/15`. |
-| `L` | Select the last day of the month. |
+| `-` | Define a range, for example `MON-FRI` or `NOV-FEB`. |
+| `/` | Define an increment, for example `0/15` or `0-30/10`. An increment can be a list item. |
+| `L` | Select the last day of the month. In the day-of-week field, `L` means Saturday. |
 | `L-n` | Select a day before the last day of the month, for example `L-2`. |
 | `LW` | Select the last weekday of the month. |
 | `nW` | Select the weekday nearest to day `n`, for example `15W`. |
 | `nL` | Select the last specified weekday of the month, for example `FRIL`. |
 | `n#x` | Select occurrence `x` of weekday `n`, for example `FRI#3`. |
 
-Lists can contain ranges. For example, the parser converts `1,4-7` to
-`[1, 4, 5, 6, 7]`.
+Lists can contain ranges and increments. The parser converts `1,4-7` to
+`[1, 4, 5, 6, 7]`. It converts `0/15,59` to `[0, 15, 30, 45, 59]`.
+
+In the day-of-month field, `L` can appear with ordinary values. For example,
+`5,15,L` selects the 5th, the 15th, and the last day of the month.
+
+An overflowing range wraps at the field boundary. For example, `NOV-FEB`
+wraps from December to January. In a list, it expands to `[11, 12, 1, 2]`.
 
 ### Examples
 
@@ -135,6 +142,8 @@ Lists can contain ranges. For example, the parser converts `1,4-7` to
 | `0 0 9 15W * ?` | At 09:00 on the weekday nearest to the 15th. |
 | `0 0 9 LW * ?` | At 09:00 on the last weekday of the month. |
 | `0 0 9 L-2 * ?` | At 09:00 two days before the last day of the month. |
+| `0 0-30/10 12 ? * *` | At 12:00, 12:10, 12:20, and 12:30. |
+| `0 0 12 5,15,L * ?` | At 12:00 on the 5th, the 15th, and the last day of the month. |
 | `0 0 9 ? * FRI#3` | At 09:00 on the third Friday of the month. |
 | `0 15 10 ? JAN MON-FRI 2026` | At 10:15 on weekdays in January 2026. |
 
@@ -184,8 +193,29 @@ Each item in `result` has these properties:
 | Property | Description |
 | --- | --- |
 | `field` | The cron field name. |
-| `mode` | The syntax mode, such as `every` or `range`. |
-| `value` | The parsed number, number array, `*`, or `?`. |
+| `mode` | The syntax mode, such as `every`, `range`, or `rangeIncrement`. |
+| `value` | The parsed value for the selected mode. |
+
+A range increment preserves its start, end, and interval:
+
+```javascript
+{ field: 'minutes', mode: 'rangeIncrement', value: [0, 30, 10] }
+```
+
+A list that contains `L` preserves each item because the list mixes numeric
+and last-day semantics:
+
+```javascript
+{
+  field: 'dayOfMonth',
+  mode: 'list',
+  value: [
+    { mode: 'specific', value: 5 },
+    { mode: 'specific', value: 15 },
+    { mode: 'daysBeforeEndOfMonth', value: 0 }
+  ]
+}
+```
 
 ## Development
 
