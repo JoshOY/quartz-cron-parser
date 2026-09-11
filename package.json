@@ -1,6 +1,6 @@
 {
   "name": "@joshoy/quartz-cron-parser",
-  "version": "0.1.10",
+  "version": "1.0.0",
   "description": "A quartz cron expression parser",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
