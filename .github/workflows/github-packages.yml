@@ -1,0 +1,42 @@
+# Test and build with Node 22, then publish to GitHub Packages.
+
+name: GitHub Packages
+
+on:
+  push:
+    branches:
+      - "release"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          registry-url: https://npm.pkg.github.com
+          scope: "@joshoy"
+          cache: yarn
+      - run: corepack enable
+      - run: yarn install --frozen-lockfile
+      - run: yarn test --runInBand
+      - run: yarn build
+      - run: yarn test:exports
+      - name: Publish package
+        run: |
+          package_name=$(node -p "require('./package.json').name")
+          package_version=$(node -p "require('./package.json').version")
+
+          if npm view "$package_name@$package_version" version --registry=https://npm.pkg.github.com > /dev/null 2>&1; then
+            echo "$package_name@$package_version already exists in GitHub Packages."
+            exit 0
+          fi
+
+          npm publish --access=public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
