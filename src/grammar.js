@@ -38,10 +38,10 @@ function id(x) { return x[0]; }
     }
   }
 
-  function convertSpecifics([d0, d1, d2]) {
+  function convertList([d0, d1, d2]) {
     return {
-      mode: 'specific',
-      value: Array.isArray(d2.value) ? [d0.value, ...d2.value] : [d0.value, d2.value],
+      mode: 'list',
+      value: [d0, ...(d2.mode === 'list' ? d2.value : [d2])],
     };
   }
 
@@ -82,26 +82,46 @@ function id(x) { return x[0]; }
     return { mode: 'specific', value: value };
   }
 
-  function convertDayOfWeekSpecifics([d0, d1, d2]) {
-    const valueD0 = (typeof d0[0] === 'string') ? WEEKDAY_MAP[d0[0]] : Number(d0[0][0]);
-    if (Array.isArray(d2.value)) {
-      return {
-        mode: 'specific',
-        value: [valueD0, ...d2.value],
-      };
+  function convertDayOfWeekValue(d) {
+    const value = Array.isArray(d) ? d[0] : d;
+    return WEEKDAY_MAP[value] || Number(value);
+  }
+
+  function convertDayOfWeekIncremental(d) {
+    const starting = d[0] === '*' ? '*' : convertDayOfWeekValue(d[0]);
+    return convertIncrementalFnFactory('dayOfWeek', 8, 1)([starting, d[1], d[2]]);
+  }
+
+  function convertLastDayOfWeekOfMonth(d) {
+    const value = convertDayOfWeekValue(d[0]);
+    if (value > 7 || value < 1) {
+      throw new Error("(Day of Week) Day of week value must be between 1-7");
     }
-    
-    // else
     return {
-      mode: 'specific',
-      value: [valueD0, d2.value],
+      mode: 'dayOfWeekBeforeEndOfMonth',
+      value,
+    };
+  }
+
+  function convertNthWeekDayOfMonth(d) {
+    const dayValue = convertDayOfWeekValue(d[0]);
+    const nth = Number(d[2]);
+    if (dayValue > 7 || dayValue < 1) {
+      throw new Error(`(Day of Week) Value '${dayValue}#${nth}' is invalid for expression of type 'Nth'. Accepted values 1-7`);
+    }
+    if (nth > 5 || nth < 1) {
+      throw new Error("(Day of Week) A numeric value between 1 and 5 must follow the '#' option");
+    }
+    return {
+      mode: 'nthWeekDayOfMonth',
+      value: [dayValue, nth],
     };
   }
 
   function convertDigitsToMonth(d) {
     const value = Number(d);
     if (value < 1 || value > 12) {
-        throw new Error("Month must be between 1 and 12");
+      throw new Error("Month must be between 1 and 12");
     }
     return { mode: 'specific', value: value };
   }
@@ -109,6 +129,11 @@ function id(x) { return x[0]; }
   function convertStringToMonth(d) {
     const value = MONTH_MAP[d[0]];
     return { mode: 'specific', value: value };
+  }
+
+  function convertMonthStringIncremental(d) {
+    const starting = MONTH_MAP[d[0]];
+    return convertIncrementalFnFactory('month', 13, 1)([starting, d[1], d[2]]);
   }
 
   function convertRangeMonthString(d) {
@@ -121,22 +146,6 @@ function id(x) { return x[0]; }
     const valueFrom = WEEKDAY_MAP[d[0]];
     const valueTo = WEEKDAY_MAP[d[2]];
     return { mode: 'range', value: [valueFrom, valueTo] };
-  }
-
-  function convertMonthSpecifics([d0, d1, d2]) {
-    const valueD0 = (typeof d0[0] === 'string') ? MONTH_MAP[d0[0]] : Number(d0[0][0]);
-    if (Array.isArray(d2.value)) {
-      return {
-        mode: 'specific',
-        value: [valueD0, ...d2.value],
-      };
-    }
-    
-    // else
-    return {
-      mode: 'specific',
-      value: [valueD0, d2.value],
-    };
   }
 
   function convertDigitsToYear(d) {
@@ -212,10 +221,11 @@ var grammar = {
     {"name": "seconds", "symbols": ["_seconds"], "postprocess": unwrapAndAddScopeName('seconds')},
     {"name": "_seconds", "symbols": ["every"]},
     {"name": "_seconds", "symbols": ["secondsIncremental"]},
-    {"name": "_seconds", "symbols": ["secondsRange"]},
     {"name": "_seconds", "symbols": ["specificSeconds"]},
-    {"name": "specificSeconds", "symbols": ["specificSecond", {"literal":","}, "specificSeconds"], "postprocess": convertSpecifics},
-    {"name": "specificSeconds", "symbols": ["specificSecond"], "postprocess": id},
+    {"name": "specificSeconds", "symbols": ["specificSecondsItem", {"literal":","}, "specificSeconds"], "postprocess": convertList},
+    {"name": "specificSeconds", "symbols": ["specificSecondsItem"], "postprocess": id},
+    {"name": "specificSecondsItem", "symbols": ["specificSecond"], "postprocess": id},
+    {"name": "specificSecondsItem", "symbols": ["secondsRange"], "postprocess": id},
     {"name": "specificSecond", "symbols": ["digits"], "postprocess": convertDigitsToMinuteOrSecond},
     {"name": "secondsIncremental", "symbols": ["digits", {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('Seconds', 60)},
     {"name": "secondsIncremental", "symbols": [{"literal":"*"}, {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('Seconds', 60)},
@@ -223,10 +233,11 @@ var grammar = {
     {"name": "minutes", "symbols": ["_minutes"], "postprocess": unwrapAndAddScopeName('minutes')},
     {"name": "_minutes", "symbols": ["specificMinutes"]},
     {"name": "_minutes", "symbols": ["minutesIncremental"]},
-    {"name": "_minutes", "symbols": ["minutesRange"]},
     {"name": "_minutes", "symbols": ["every"]},
-    {"name": "specificMinutes", "symbols": ["specificMinute", {"literal":","}, "specificMinutes"], "postprocess": convertSpecifics},
-    {"name": "specificMinutes", "symbols": ["specificMinute"], "postprocess": id},
+    {"name": "specificMinutes", "symbols": ["specificMinutesItem", {"literal":","}, "specificMinutes"], "postprocess": convertList},
+    {"name": "specificMinutes", "symbols": ["specificMinutesItem"], "postprocess": id},
+    {"name": "specificMinutesItem", "symbols": ["specificMinute"], "postprocess": id},
+    {"name": "specificMinutesItem", "symbols": ["minutesRange"], "postprocess": id},
     {"name": "specificMinute", "symbols": ["digits"], "postprocess": convertDigitsToMinuteOrSecond},
     {"name": "minutesIncremental", "symbols": ["digits", {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('Minutes', 60)},
     {"name": "minutesIncremental", "symbols": [{"literal":"*"}, {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('Minutes', 60)},
@@ -234,10 +245,11 @@ var grammar = {
     {"name": "hours", "symbols": ["_hours"], "postprocess": unwrapAndAddScopeName('hours')},
     {"name": "_hours", "symbols": ["specificHours"]},
     {"name": "_hours", "symbols": ["hoursIncremental"]},
-    {"name": "_hours", "symbols": ["hoursRange"]},
     {"name": "_hours", "symbols": ["every"]},
-    {"name": "specificHours", "symbols": ["specificHour", {"literal":","}, "specificHours"], "postprocess": convertSpecifics},
-    {"name": "specificHours", "symbols": ["specificHour"], "postprocess": id},
+    {"name": "specificHours", "symbols": ["specificHoursItem", {"literal":","}, "specificHours"], "postprocess": convertList},
+    {"name": "specificHours", "symbols": ["specificHoursItem"], "postprocess": id},
+    {"name": "specificHoursItem", "symbols": ["specificHour"], "postprocess": id},
+    {"name": "specificHoursItem", "symbols": ["hoursRange"], "postprocess": id},
     {"name": "specificHour", "symbols": ["digits"], "postprocess": convertDigitsToHour},
     {"name": "hoursIncremental", "symbols": ["digits", {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('Hours', 24)},
     {"name": "hoursIncremental", "symbols": [{"literal":"*"}, {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('Hours', 24)},
@@ -245,15 +257,16 @@ var grammar = {
     {"name": "dayOfMonth", "symbols": ["_dayOfMonth"], "postprocess": unwrapAndAddScopeName('dayOfMonth')},
     {"name": "_dayOfMonth", "symbols": ["specificDays"]},
     {"name": "_dayOfMonth", "symbols": ["dayOfMonthIncremental"]},
-    {"name": "_dayOfMonth", "symbols": ["dayOfMonthRange"]},
     {"name": "_dayOfMonth", "symbols": ["every"]},
     {"name": "_dayOfMonth", "symbols": ["noSpecificValue"]},
     {"name": "_dayOfMonth", "symbols": ["lastDayOfMonth"]},
     {"name": "_dayOfMonth", "symbols": ["lastWeekdayOfMonth"]},
     {"name": "_dayOfMonth", "symbols": ["lastXDaysBeforeEndOfMonth"]},
     {"name": "_dayOfMonth", "symbols": ["nearestWeekdayOfMonth"]},
-    {"name": "specificDays", "symbols": ["specificDay", {"literal":","}, "specificDays"], "postprocess": convertSpecifics},
-    {"name": "specificDays", "symbols": ["specificDay"], "postprocess": id},
+    {"name": "specificDays", "symbols": ["specificDaysItem", {"literal":","}, "specificDays"], "postprocess": convertList},
+    {"name": "specificDays", "symbols": ["specificDaysItem"], "postprocess": id},
+    {"name": "specificDaysItem", "symbols": ["specificDay"], "postprocess": id},
+    {"name": "specificDaysItem", "symbols": ["dayOfMonthRange"], "postprocess": id},
     {"name": "specificDay", "symbols": ["digits"], "postprocess": convertDigitsToDay},
     {"name": "dayOfMonthIncremental", "symbols": ["digits", {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('dayOfMonth', 32, 1)},
     {"name": "dayOfMonthIncremental", "symbols": [{"literal":"*"}, {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('dayOfMonth', 32, 1)},
@@ -283,12 +296,12 @@ var grammar = {
     {"name": "month", "symbols": ["_month"], "postprocess": unwrapAndAddScopeName('month')},
     {"name": "_month", "symbols": ["specificMonths"]},
     {"name": "_month", "symbols": ["monthIncremental"]},
-    {"name": "_month", "symbols": ["monthRange"]},
     {"name": "_month", "symbols": ["every"]},
-    {"name": "specificMonths", "symbols": ["specificMonthDigit", {"literal":","}, "specificMonths"], "postprocess": convertMonthSpecifics},
-    {"name": "specificMonths", "symbols": ["specificMonthString", {"literal":","}, "specificMonths"], "postprocess": convertMonthSpecifics},
-    {"name": "specificMonths", "symbols": ["specificMonthDigit"], "postprocess": convertDigitsToMonth},
-    {"name": "specificMonths", "symbols": ["specificMonthString"], "postprocess": convertStringToMonth},
+    {"name": "specificMonths", "symbols": ["specificMonthItem", {"literal":","}, "specificMonths"], "postprocess": convertList},
+    {"name": "specificMonths", "symbols": ["specificMonthItem"], "postprocess": id},
+    {"name": "specificMonthItem", "symbols": ["specificMonthDigit"], "postprocess": convertDigitsToMonth},
+    {"name": "specificMonthItem", "symbols": ["specificMonthString"], "postprocess": convertStringToMonth},
+    {"name": "specificMonthItem", "symbols": ["monthRange"], "postprocess": id},
     {"name": "specificMonthDigit", "symbols": ["digits"]},
     {"name": "specificMonthString$string$1", "symbols": [{"literal":"J"}, {"literal":"A"}, {"literal":"N"}], "postprocess": function joiner(d) {return d.join('');}},
     {"name": "specificMonthString", "symbols": ["specificMonthString$string$1"]},
@@ -315,21 +328,22 @@ var grammar = {
     {"name": "specificMonthString$string$12", "symbols": [{"literal":"D"}, {"literal":"E"}, {"literal":"C"}], "postprocess": function joiner(d) {return d.join('');}},
     {"name": "specificMonthString", "symbols": ["specificMonthString$string$12"]},
     {"name": "monthIncremental", "symbols": ["digits", {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('month', 13, 1)},
+    {"name": "monthIncremental", "symbols": ["specificMonthString", {"literal":"/"}, "digits"], "postprocess": convertMonthStringIncremental},
     {"name": "monthIncremental", "symbols": [{"literal":"*"}, {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('month', 13, 1)},
     {"name": "monthRange", "symbols": ["digits", {"literal":"-"}, "digits"], "postprocess": convertRangeFnFactory('month', 13, 1)},
     {"name": "monthRange", "symbols": ["specificMonthString", {"literal":"-"}, "specificMonthString"], "postprocess": convertRangeMonthString},
     {"name": "dayOfWeek", "symbols": ["_dayOfWeek"], "postprocess": unwrapAndAddScopeName('dayOfWeek')},
     {"name": "_dayOfWeek", "symbols": ["specificDayOfWeeks"]},
     {"name": "_dayOfWeek", "symbols": ["dayOfWeekIncremental"]},
-    {"name": "_dayOfWeek", "symbols": ["dayOfWeekRange"]},
     {"name": "_dayOfWeek", "symbols": ["lastDayOfWeekOfMonth"]},
     {"name": "_dayOfWeek", "symbols": ["nthWeekDayOfMonth"]},
     {"name": "_dayOfWeek", "symbols": ["every"]},
     {"name": "_dayOfWeek", "symbols": ["noSpecificValue"]},
-    {"name": "specificDayOfWeeks", "symbols": ["specificDayOfWeekDigit", {"literal":","}, "specificDayOfWeeks"], "postprocess": convertDayOfWeekSpecifics},
-    {"name": "specificDayOfWeeks", "symbols": ["specificDayOfWeekString", {"literal":","}, "specificDayOfWeeks"], "postprocess": convertDayOfWeekSpecifics},
-    {"name": "specificDayOfWeeks", "symbols": ["specificDayOfWeekDigit"], "postprocess": convertDigitsToDayOfWeek},
-    {"name": "specificDayOfWeeks", "symbols": ["specificDayOfWeekString"], "postprocess": convertStringToDayOfWeek},
+    {"name": "specificDayOfWeeks", "symbols": ["specificDayOfWeekItem", {"literal":","}, "specificDayOfWeeks"], "postprocess": convertList},
+    {"name": "specificDayOfWeeks", "symbols": ["specificDayOfWeekItem"], "postprocess": id},
+    {"name": "specificDayOfWeekItem", "symbols": ["specificDayOfWeekDigit"], "postprocess": convertDigitsToDayOfWeek},
+    {"name": "specificDayOfWeekItem", "symbols": ["specificDayOfWeekString"], "postprocess": convertStringToDayOfWeek},
+    {"name": "specificDayOfWeekItem", "symbols": ["dayOfWeekRange"], "postprocess": id},
     {"name": "specificDayOfWeekDigit", "symbols": ["digit"]},
     {"name": "specificDayOfWeekString$string$1", "symbols": [{"literal":"S"}, {"literal":"U"}, {"literal":"N"}], "postprocess": function joiner(d) {return d.join('');}},
     {"name": "specificDayOfWeekString", "symbols": ["specificDayOfWeekString$string$1"]},
@@ -345,41 +359,23 @@ var grammar = {
     {"name": "specificDayOfWeekString", "symbols": ["specificDayOfWeekString$string$6"]},
     {"name": "specificDayOfWeekString$string$7", "symbols": [{"literal":"S"}, {"literal":"A"}, {"literal":"T"}], "postprocess": function joiner(d) {return d.join('');}},
     {"name": "specificDayOfWeekString", "symbols": ["specificDayOfWeekString$string$7"]},
-    {"name": "dayOfWeekIncremental", "symbols": ["digits", {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('dayOfWeek', 8, 1)},
-    {"name": "dayOfWeekIncremental", "symbols": [{"literal":"*"}, {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('dayOfWeek', 8, 1)},
+    {"name": "dayOfWeekIncremental", "symbols": ["digits", {"literal":"/"}, "digits"], "postprocess": convertDayOfWeekIncremental},
+    {"name": "dayOfWeekIncremental", "symbols": ["specificDayOfWeekString", {"literal":"/"}, "digits"], "postprocess": convertDayOfWeekIncremental},
+    {"name": "dayOfWeekIncremental", "symbols": [{"literal":"*"}, {"literal":"/"}, "digits"], "postprocess": convertDayOfWeekIncremental},
     {"name": "dayOfWeekRange", "symbols": ["digits", {"literal":"-"}, "digits"], "postprocess": convertRangeFnFactory('dayOfWeek', 8)},
     {"name": "dayOfWeekRange", "symbols": ["specificDayOfWeekString", {"literal":"-"}, "specificDayOfWeekString"], "postprocess": convertRangeDayOfWeekString},
-    {"name": "lastDayOfWeekOfMonth", "symbols": ["digits", "last"], "postprocess":  (d) => {
-          const value = Number(d[0]);
-          if (value > 7 || value < 1) {
-            throw new Error("(Day of Week) Day of week value must be between 1-7");
-          }
-          return {
-            mode: 'dayOfWeekBeforeEndOfMonth',
-            value,
-          };
-        } },
-    {"name": "nthWeekDayOfMonth", "symbols": ["digits", {"literal":"#"}, "digits"], "postprocess":  (d) => {
-          const dayValue = Number(d[0]);
-          const nth = Number(d[2]);
-          if (dayValue > 7 || dayValue < 1) {
-            throw new Error(`(Day of Week) Value '${dayValue}#${nth}' is invalid for expression of type 'Nth'. Accepted values 1-7`);
-          }
-          if (nth > 5 || nth < 1) {
-            throw new Error("(Day of Week) A numeric value between 1 and 5 must follow the '#' option");
-          }
-          return {
-            mode: 'nthWeekDayOfMonth',
-            value: [dayValue, nth],
-          };
-        } },
+    {"name": "lastDayOfWeekOfMonth", "symbols": ["digits", "last"], "postprocess": convertLastDayOfWeekOfMonth},
+    {"name": "lastDayOfWeekOfMonth", "symbols": ["specificDayOfWeekString", "last"], "postprocess": convertLastDayOfWeekOfMonth},
+    {"name": "nthWeekDayOfMonth", "symbols": ["digits", {"literal":"#"}, "digits"], "postprocess": convertNthWeekDayOfMonth},
+    {"name": "nthWeekDayOfMonth", "symbols": ["specificDayOfWeekString", {"literal":"#"}, "digits"], "postprocess": convertNthWeekDayOfMonth},
     {"name": "years", "symbols": ["_years"], "postprocess": unwrapAndAddScopeName('years')},
     {"name": "_years", "symbols": ["yearsIncremental"]},
-    {"name": "_years", "symbols": ["yearsRange"]},
     {"name": "_years", "symbols": ["specificYears"]},
     {"name": "_years", "symbols": ["every"]},
-    {"name": "specificYears", "symbols": ["specificYear", {"literal":","}, "specificYears"], "postprocess": convertSpecifics},
-    {"name": "specificYears", "symbols": ["specificYear"], "postprocess": id},
+    {"name": "specificYears", "symbols": ["specificYearsItem", {"literal":","}, "specificYears"], "postprocess": convertList},
+    {"name": "specificYears", "symbols": ["specificYearsItem"], "postprocess": id},
+    {"name": "specificYearsItem", "symbols": ["specificYear"], "postprocess": id},
+    {"name": "specificYearsItem", "symbols": ["yearsRange"], "postprocess": id},
     {"name": "specificYear", "symbols": ["yearDigits"], "postprocess": convertDigitsToYear},
     {"name": "yearsIncremental", "symbols": ["yearDigits", {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('Years', 2099, 1970)},
     {"name": "yearsIncremental", "symbols": [{"literal":"*"}, {"literal":"/"}, "digits"], "postprocess": convertIncrementalFnFactory('Years', 2099, 1970)},

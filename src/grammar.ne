@@ -36,10 +36,10 @@
     }
   }
 
-  function convertSpecifics([d0, d1, d2]) {
+  function convertList([d0, d1, d2]) {
     return {
-      mode: 'specific',
-      value: Array.isArray(d2.value) ? [d0.value, ...d2.value] : [d0.value, d2.value],
+      mode: 'list',
+      value: [d0, ...(d2.mode === 'list' ? d2.value : [d2])],
     };
   }
 
@@ -80,19 +80,39 @@
     return { mode: 'specific', value: value };
   }
 
-  function convertDayOfWeekSpecifics([d0, d1, d2]) {
-    const valueD0 = (typeof d0[0] === 'string') ? WEEKDAY_MAP[d0[0]] : Number(d0[0][0]);
-    if (Array.isArray(d2.value)) {
-      return {
-        mode: 'specific',
-        value: [valueD0, ...d2.value],
-      };
+  function convertDayOfWeekValue(d) {
+    const value = Array.isArray(d) ? d[0] : d;
+    return WEEKDAY_MAP[value] || Number(value);
+  }
+
+  function convertDayOfWeekIncremental(d) {
+    const starting = d[0] === '*' ? '*' : convertDayOfWeekValue(d[0]);
+    return convertIncrementalFnFactory('dayOfWeek', 8, 1)([starting, d[1], d[2]]);
+  }
+
+  function convertLastDayOfWeekOfMonth(d) {
+    const value = convertDayOfWeekValue(d[0]);
+    if (value > 7 || value < 1) {
+      throw new Error("(Day of Week) Day of week value must be between 1-7");
     }
-    
-    // else
     return {
-      mode: 'specific',
-      value: [valueD0, d2.value],
+      mode: 'dayOfWeekBeforeEndOfMonth',
+      value,
+    };
+  }
+
+  function convertNthWeekDayOfMonth(d) {
+    const dayValue = convertDayOfWeekValue(d[0]);
+    const nth = Number(d[2]);
+    if (dayValue > 7 || dayValue < 1) {
+      throw new Error(`(Day of Week) Value '${dayValue}#${nth}' is invalid for expression of type 'Nth'. Accepted values 1-7`);
+    }
+    if (nth > 5 || nth < 1) {
+      throw new Error("(Day of Week) A numeric value between 1 and 5 must follow the '#' option");
+    }
+    return {
+      mode: 'nthWeekDayOfMonth',
+      value: [dayValue, nth],
     };
   }
 
@@ -109,6 +129,11 @@
     return { mode: 'specific', value: value };
   }
 
+  function convertMonthStringIncremental(d) {
+    const starting = MONTH_MAP[d[0]];
+    return convertIncrementalFnFactory('month', 13, 1)([starting, d[1], d[2]]);
+  }
+
   function convertRangeMonthString(d) {
     const valueFrom = MONTH_MAP[d[0]];
     const valueTo = MONTH_MAP[d[2]];
@@ -119,22 +144,6 @@
     const valueFrom = WEEKDAY_MAP[d[0]];
     const valueTo = WEEKDAY_MAP[d[2]];
     return { mode: 'range', value: [valueFrom, valueTo] };
-  }
-
-  function convertMonthSpecifics([d0, d1, d2]) {
-    const valueD0 = (typeof d0[0] === 'string') ? MONTH_MAP[d0[0]] : Number(d0[0][0]);
-    if (Array.isArray(d2.value)) {
-      return {
-        mode: 'specific',
-        value: [valueD0, ...d2.value],
-      };
-    }
-    
-    // else
-    return {
-      mode: 'specific',
-      value: [valueD0, d2.value],
-    };
   }
 
   function convertDigitsToYear(d) {
@@ -228,11 +237,14 @@ noSpecificValue -> "?" {% d => ({ mode: 'noSpecific', value: '?' }) %}
 
 seconds -> _seconds {% unwrapAndAddScopeName('seconds') %}
 
-_seconds -> every | secondsIncremental | secondsRange | specificSeconds
+_seconds -> every | secondsIncremental | specificSeconds
 
 specificSeconds
- -> specificSecond "," specificSeconds {% convertSpecifics %}
-  | specificSecond {% id %}
+  -> specificSecondsItem "," specificSeconds {% convertList %}
+   | specificSecondsItem {% id %}
+
+specificSecondsItem -> specificSecond {% id %}
+   | secondsRange {% id %}
 
 specificSecond -> digits {% convertDigitsToMinuteOrSecond %}
 
@@ -248,11 +260,14 @@ secondsRange -> digits "-" digits {% convertRangeFnFactory('Seconds', 60) %}
 
 minutes -> _minutes {% unwrapAndAddScopeName('minutes') %}
 
-_minutes -> specificMinutes | minutesIncremental | minutesRange | every
+_minutes -> specificMinutes | minutesIncremental | every
 
 specificMinutes
-  -> specificMinute "," specificMinutes {% convertSpecifics %}
-  |  specificMinute {% id %}
+  -> specificMinutesItem "," specificMinutes {% convertList %}
+   | specificMinutesItem {% id %}
+
+specificMinutesItem -> specificMinute {% id %}
+   | minutesRange {% id %}
 
 specificMinute -> digits {% convertDigitsToMinuteOrSecond %}
 
@@ -269,11 +284,14 @@ minutesRange -> digits "-" digits {% convertRangeFnFactory('Minutes', 60) %}
 
 hours -> _hours {% unwrapAndAddScopeName('hours') %}
 
-_hours -> specificHours | hoursIncremental | hoursRange | every
+_hours -> specificHours | hoursIncremental | every
 
 specificHours
-  -> specificHour "," specificHours {% convertSpecifics %}
-  |  specificHour {% id %}
+  -> specificHoursItem "," specificHours {% convertList %}
+   | specificHoursItem {% id %}
+
+specificHoursItem -> specificHour {% id %}
+   | hoursRange {% id %}
 
 specificHour -> digits {% convertDigitsToHour %}
 
@@ -289,11 +307,14 @@ hoursRange -> digits "-" digits {% convertRangeFnFactory('Hours', 24) %}
 
 dayOfMonth -> _dayOfMonth {% unwrapAndAddScopeName('dayOfMonth') %}
 
-_dayOfMonth -> specificDays | dayOfMonthIncremental | dayOfMonthRange | every | noSpecificValue | lastDayOfMonth | lastWeekdayOfMonth | lastXDaysBeforeEndOfMonth | nearestWeekdayOfMonth
+_dayOfMonth -> specificDays | dayOfMonthIncremental | every | noSpecificValue | lastDayOfMonth | lastWeekdayOfMonth | lastXDaysBeforeEndOfMonth | nearestWeekdayOfMonth
 
 specificDays
-  -> specificDay "," specificDays  {% convertSpecifics %}
-  |  specificDay {% id %}
+  -> specificDaysItem "," specificDays {% convertList %}
+   | specificDaysItem {% id %}
+
+specificDaysItem -> specificDay {% id %}
+   | dayOfMonthRange {% id %}
 
 specificDay -> digits {% convertDigitsToDay %}
 
@@ -342,13 +363,16 @@ nearestWeekdayOfMonth -> digits weekday
 
 month -> _month  {% unwrapAndAddScopeName('month') %}
 
-_month -> specificMonths | monthIncremental | monthRange | every
+_month -> specificMonths | monthIncremental | every
 
 specificMonths
-  -> specificMonthDigit "," specificMonths {% convertMonthSpecifics %}
-  |  specificMonthString "," specificMonths  {% convertMonthSpecifics %}
-  |  specificMonthDigit  {% convertDigitsToMonth %}
-  |  specificMonthString {% convertStringToMonth %}
+  -> specificMonthItem "," specificMonths {% convertList %}
+   | specificMonthItem {% id %}
+
+specificMonthItem
+  -> specificMonthDigit {% convertDigitsToMonth %}
+   | specificMonthString {% convertStringToMonth %}
+   | monthRange {% id %}
 
 specificMonthDigit -> digits
 
@@ -356,6 +380,7 @@ specificMonthString -> "JAN" | "FEB" | "MAR" | "APR" | "MAY" | "JUN" | "JUL" | "
 
 monthIncremental
   -> digits "/" digits {% convertIncrementalFnFactory('month', 13, 1) %}
+   | specificMonthString "/" digits {% convertMonthStringIncremental %}
    | "*" "/" digits {% convertIncrementalFnFactory('month', 13, 1) %}
 
 monthRange
@@ -368,54 +393,38 @@ monthRange
 
 dayOfWeek -> _dayOfWeek {% unwrapAndAddScopeName('dayOfWeek') %}
 
-_dayOfWeek -> specificDayOfWeeks | dayOfWeekIncremental | dayOfWeekRange | lastDayOfWeekOfMonth | nthWeekDayOfMonth | every | noSpecificValue
+_dayOfWeek -> specificDayOfWeeks | dayOfWeekIncremental | lastDayOfWeekOfMonth | nthWeekDayOfMonth | every | noSpecificValue
 
 # Strangely, it is allowed to hybridize both string and numeric values. (e.g. SUN,2,3,FRI)
 specificDayOfWeeks
- -> specificDayOfWeekDigit "," specificDayOfWeeks {% convertDayOfWeekSpecifics %}
-  | specificDayOfWeekString "," specificDayOfWeeks {% convertDayOfWeekSpecifics %}
-  | specificDayOfWeekDigit {% convertDigitsToDayOfWeek %}
-  | specificDayOfWeekString {% convertStringToDayOfWeek %}
+  -> specificDayOfWeekItem "," specificDayOfWeeks {% convertList %}
+   | specificDayOfWeekItem {% id %}
+
+specificDayOfWeekItem
+  -> specificDayOfWeekDigit {% convertDigitsToDayOfWeek %}
+   | specificDayOfWeekString {% convertStringToDayOfWeek %}
+   | dayOfWeekRange {% id %}
 
 specificDayOfWeekDigit -> digit
 
 specificDayOfWeekString -> "SUN" | "MON" | "TUE" | "WED" | "THU" | "FRI" | "SAT"
 
 dayOfWeekIncremental
-  -> digits "/" digits {% convertIncrementalFnFactory('dayOfWeek', 8, 1) %}
-   | "*" "/" digits {% convertIncrementalFnFactory('dayOfWeek', 8, 1) %}
+  -> digits "/" digits {% convertDayOfWeekIncremental %}
+   | specificDayOfWeekString "/" digits {% convertDayOfWeekIncremental %}
+   | "*" "/" digits {% convertDayOfWeekIncremental %}
 
 dayOfWeekRange
   -> digits "-" digits {% convertRangeFnFactory('dayOfWeek', 8) %}
    |  specificDayOfWeekString "-" specificDayOfWeekString {% convertRangeDayOfWeekString %}
 
-lastDayOfWeekOfMonth -> digits last
-{% (d) => {
-  const value = Number(d[0]);
-  if (value > 7 || value < 1) {
-    throw new Error("(Day of Week) Day of week value must be between 1-7");
-  }
-  return {
-    mode: 'dayOfWeekBeforeEndOfMonth',
-    value,
-  };
-} %}
+lastDayOfWeekOfMonth
+  -> digits last {% convertLastDayOfWeekOfMonth %}
+   | specificDayOfWeekString last {% convertLastDayOfWeekOfMonth %}
 
-nthWeekDayOfMonth -> digits "#" digits
-{% (d) => {
-  const dayValue = Number(d[0]);
-  const nth = Number(d[2]);
-  if (dayValue > 7 || dayValue < 1) {
-    throw new Error(`(Day of Week) Value '${dayValue}#${nth}' is invalid for expression of type 'Nth'. Accepted values 1-7`);
-  }
-  if (nth > 5 || nth < 1) {
-    throw new Error("(Day of Week) A numeric value between 1 and 5 must follow the '#' option");
-  }
-  return {
-    mode: 'nthWeekDayOfMonth',
-    value: [dayValue, nth],
-  };
-} %}
+nthWeekDayOfMonth
+  -> digits "#" digits {% convertNthWeekDayOfMonth %}
+   | specificDayOfWeekString "#" digits {% convertNthWeekDayOfMonth %}
 
 ###################
 #  Year settings  #
@@ -423,11 +432,14 @@ nthWeekDayOfMonth -> digits "#" digits
 
 years -> _years {% unwrapAndAddScopeName('years') %}
 
-_years ->  yearsIncremental | yearsRange | specificYears | every
+_years ->  yearsIncremental | specificYears | every
 
 specificYears
-  -> specificYear "," specificYears {% convertSpecifics %}
-  |  specificYear {% id %}
+  -> specificYearsItem "," specificYears {% convertList %}
+   | specificYearsItem {% id %}
+
+specificYearsItem -> specificYear {% id %}
+   | yearsRange {% id %}
 
 specificYear -> yearDigits {% convertDigitsToYear %}
 

@@ -1,8 +1,68 @@
-import { QuartzCronValidationResult } from '../src/index';
+import { QuartzCronField, QuartzCronValidationResult } from '../src/index';
 
 export type Case = [string, QuartzCronValidationResult];
 
+const fields: QuartzCronField['field'][] = ['seconds', 'minutes', 'hours', 'dayOfMonth', 'month', 'dayOfWeek', 'years'];
+
+function expression(index: number, value: string): string {
+  const parts = ['0', '0', '12', '?', '*', '*', '*'];
+  if (index === 3) parts[5] = '?';
+  parts[index] = value;
+  return parts.join(' ');
+}
+
+function listCase(index: number, input: string, value: number[]): Case {
+  const result: QuartzCronField[] = [
+    { field: 'seconds', mode: 'specific', value: 0 },
+    { field: 'minutes', mode: 'specific', value: 0 },
+    { field: 'hours', mode: 'specific', value: 12 },
+    { field: 'dayOfMonth', mode: 'noSpecific', value: '?' },
+    { field: 'month', mode: 'every', value: '*' },
+    { field: 'dayOfWeek', mode: 'every', value: '*' },
+    { field: 'years', mode: 'every', value: '*' },
+  ];
+  if (index === 3) result[5] = { field: 'dayOfWeek', mode: 'noSpecific', value: '?' };
+  result[index] = { field: fields[index], mode: 'specific', value };
+  return [expression(index, input), { error: null, result }];
+}
+
+const listPatterns: [string, number[]][] = [
+  ['1,2,4-7', [1, 2, 4, 5, 6, 7]],
+  ['1-2,4,6-7', [1, 2, 4, 6, 7]],
+  ['1-2,4-7', [1, 2, 4, 5, 6, 7]],
+  ['4-7,1,2', [4, 5, 6, 7, 1, 2]],
+  ['1,2-2', [1, 2]],
+  ['1,1-2', [1, 1, 2]],
+];
+
+const listCases: Case[] = fields.reduce<Case[]>((cases, field, index) => {
+  const offset = index === 6 ? 1970 : 0;
+  return cases.concat(listPatterns.map(([input, expected]) => listCase(
+    index,
+    input.replace(/\d+/g, value => String(Number(value) + offset)),
+    expected.map(value => value + offset),
+  )));
+}, []);
+
+const invalidListFields: [number, string][] = [
+  [0, '1,58-60'], [1, '1,60-61'], [2, '1,23-24'],
+  [3, '1,0-2'], [3, '1,30-32'], [4, '1,11-13'],
+  [4, 'JAN,JUN-FEB'], [5, '1,6-8'], [5, 'MON,FRI-WED'],
+  [6, '1970,2098-2100'], [6, '1970,1968-1969'],
+  [0, '1,7-4'], [0, '1,,4-7'], [0, '1,4-7,'],
+  [5, 'MON,FRIL'], [5, 'MON,FRI#3'],
+];
+
+export const invalidCases: string[] = invalidListFields.map(([index, input]) => expression(index, input));
+
 export const parseableCases: Case[] = [
+  ...listCases,
+  listCase(4, 'JAN,MAR-MAY', [1, 3, 4, 5]),
+  listCase(4, 'MAR-MAY,1,JUN', [3, 4, 5, 1, 6]),
+  listCase(5, 'MON,WED-FRI', [2, 4, 5, 6]),
+  listCase(5, 'mon-wed,7', [2, 3, 4, 7]),
+  listCase(2, '1,20-23', [1, 20, 21, 22, 23]),
+  listCase(3, '1,29-31', [1, 29, 30, 31]),
   [
     '* * * ? * *',
     {
@@ -179,6 +239,66 @@ export const parseableCases: Case[] = [
         { field: 'dayOfMonth',  mode: 'noSpecific', value: '?' },
         { field: 'month', mode: 'every', value: '*' },
         { field: 'dayOfWeek', mode: 'nthWeekDayOfMonth', value: [1, 2] },
+      ],
+    },
+  ],
+  [
+    // Every two days of the week, starting on Friday
+    '* * * ? * FRI/2',
+    {
+      error: null,
+      result: [
+        { field: 'seconds', mode: 'every', value: '*' },
+        { field: 'minutes', mode: 'every', value: '*' },
+        { field: 'hours', mode: 'every', value: '*' },
+        { field: 'dayOfMonth', mode: 'noSpecific', value: '?' },
+        { field: 'month', mode: 'every', value: '*' },
+        { field: 'dayOfWeek', mode: 'increment', value: [6, 2] },
+      ],
+    },
+  ],
+  [
+    // Every two months, starting in February
+    '* * * ? FEB/2 *',
+    {
+      error: null,
+      result: [
+        { field: 'seconds', mode: 'every', value: '*' },
+        { field: 'minutes', mode: 'every', value: '*' },
+        { field: 'hours', mode: 'every', value: '*' },
+        { field: 'dayOfMonth', mode: 'noSpecific', value: '?' },
+        { field: 'month', mode: 'increment', value: [2, 2] },
+        { field: 'dayOfWeek', mode: 'every', value: '*' },
+      ],
+    },
+  ],
+  [
+    // The last Friday of the month
+    '* * * ? * FRIL',
+    {
+      error: null,
+      result: [
+        { field: 'seconds', mode: 'every', value: '*' },
+        { field: 'minutes', mode: 'every', value: '*' },
+        { field: 'hours', mode: 'every', value: '*' },
+        { field: 'dayOfMonth', mode: 'noSpecific', value: '?' },
+        { field: 'month', mode: 'every', value: '*' },
+        { field: 'dayOfWeek', mode: 'dayOfWeekBeforeEndOfMonth', value: 6 },
+      ],
+    },
+  ],
+  [
+    // The third Friday of the month
+    '* * * ? * FRI#3',
+    {
+      error: null,
+      result: [
+        { field: 'seconds', mode: 'every', value: '*' },
+        { field: 'minutes', mode: 'every', value: '*' },
+        { field: 'hours', mode: 'every', value: '*' },
+        { field: 'dayOfMonth', mode: 'noSpecific', value: '?' },
+        { field: 'month', mode: 'every', value: '*' },
+        { field: 'dayOfWeek', mode: 'nthWeekDayOfMonth', value: [6, 3] },
       ],
     },
   ],
