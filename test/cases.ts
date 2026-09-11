@@ -45,11 +45,11 @@ const listCases: Case[] = fields.reduce<Case[]>((cases, field, index) => {
 }, []);
 
 const invalidListFields: [number, string][] = [
-  [0, '1,58-60'], [1, '1,60-61'], [2, '1,23-24'],
+  [0, '1,58-60'], [0, '0-60/10'], [1, '1,60-61'], [2, '1,23-24'],
   [3, '1,0-2'], [3, '1,30-32'], [4, '1,11-13'],
-  [4, 'JAN,JUN-FEB'], [5, '1,6-8'], [5, 'MON,FRI-WED'],
-  [6, '1970,2098-2100'], [6, '1970,1968-1969'],
-  [0, '1,7-4'], [0, '1,,4-7'], [0, '1,4-7,'],
+  [5, '1,6-8'],
+  [6, '1970,2098-2100'], [6, '1970,1968-1969'], [6, '1969-2000/10'],
+  [0, '1,,4-7'], [0, '1,4-7,'],
   [5, 'MON,FRIL'], [5, 'MON,FRI#3'],
 ];
 
@@ -57,12 +57,36 @@ export const invalidCases: string[] = invalidListFields.map(([index, input]) => 
 
 export const parseableCases: Case[] = [
   ...listCases,
+  [
+    '0\t0\t12\t?\t*\tMON-FRI',
+    {
+      error: null,
+      result: [
+        { field: 'seconds', mode: 'specific', value: 0 },
+        { field: 'minutes', mode: 'specific', value: 0 },
+        { field: 'hours', mode: 'specific', value: 12 },
+        { field: 'dayOfMonth', mode: 'noSpecific', value: '?' },
+        { field: 'month', mode: 'every', value: '*' },
+        { field: 'dayOfWeek', mode: 'range', value: [2, 6] },
+      ],
+    },
+  ],
   listCase(4, 'JAN,MAR-MAY', [1, 3, 4, 5]),
   listCase(4, 'MAR-MAY,1,JUN', [3, 4, 5, 1, 6]),
   listCase(5, 'MON,WED-FRI', [2, 4, 5, 6]),
   listCase(5, 'mon-wed,7', [2, 3, 4, 7]),
   listCase(2, '1,20-23', [1, 20, 21, 22, 23]),
   listCase(3, '1,29-31', [1, 29, 30, 31]),
+  listCase(2, '22-2,12', [22, 23, 0, 1, 2, 12]),
+  listCase(4, 'JAN,JUN-FEB', [1, 6, 7, 8, 9, 10, 11, 12, 1, 2]),
+  listCase(5, 'MON,FRI-WED', [2, 6, 7, 1, 2, 3, 4]),
+  listCase(0, '0/15,59', [0, 15, 30, 45, 59]),
+  listCase(1, '1,10/20', [1, 10, 30, 50]),
+  listCase(2, '1/10,23', [1, 11, 21, 23]),
+  listCase(3, '1/10,30', [1, 11, 21, 31, 30]),
+  listCase(4, 'JAN/5,DEC', [1, 6, 11, 12]),
+  listCase(5, 'MON/2,SAT', [2, 4, 6, 7]),
+  listCase(6, '2098/1,1970', [2098, 2099, 1970]),
   [
     '* * * ? * *',
     {
@@ -123,9 +147,58 @@ export const parseableCases: Case[] = [
   [
     '0 0 12 ? JUN-FEB *',
     {
-      error: new Error('(Months) Unsupported value \'6-2\' for range. Accepted values are 1-12'),
-      result: null,
-    }
+      error: null,
+      result: [
+        { field: 'seconds', mode: 'specific', value: 0 },
+        { field: 'minutes', mode: 'specific', value: 0 },
+        { field: 'hours', mode: 'specific', value: 12 },
+        { field: 'dayOfMonth', mode: 'noSpecific', value: '?' },
+        { field: 'month', mode: 'range', value: [6, 2] },
+        { field: 'dayOfWeek', mode: 'every', value: '*' },
+      ],
+    },
+  ],
+  [
+    '0 0 22-2 ? * *',
+    {
+      error: null,
+      result: [
+        { field: 'seconds', mode: 'specific', value: 0 },
+        { field: 'minutes', mode: 'specific', value: 0 },
+        { field: 'hours', mode: 'range', value: [22, 2] },
+        { field: 'dayOfMonth', mode: 'noSpecific', value: '?' },
+        { field: 'month', mode: 'every', value: '*' },
+        { field: 'dayOfWeek', mode: 'every', value: '*' },
+      ],
+    },
+  ],
+  [
+    '0 0 12 ? * FRI-MON',
+    {
+      error: null,
+      result: [
+        { field: 'seconds', mode: 'specific', value: 0 },
+        { field: 'minutes', mode: 'specific', value: 0 },
+        { field: 'hours', mode: 'specific', value: 12 },
+        { field: 'dayOfMonth', mode: 'noSpecific', value: '?' },
+        { field: 'month', mode: 'every', value: '*' },
+        { field: 'dayOfWeek', mode: 'range', value: [6, 2] },
+      ],
+    },
+  ],
+  [
+    '0 0 12 ? * L',
+    {
+      error: null,
+      result: [
+        { field: 'seconds', mode: 'specific', value: 0 },
+        { field: 'minutes', mode: 'specific', value: 0 },
+        { field: 'hours', mode: 'specific', value: 12 },
+        { field: 'dayOfMonth', mode: 'noSpecific', value: '?' },
+        { field: 'month', mode: 'every', value: '*' },
+        { field: 'dayOfWeek', mode: 'specific', value: 7 },
+      ],
+    },
   ],
   [
     '0 0 12 ? * MON,SAT',
@@ -195,6 +268,21 @@ export const parseableCases: Case[] = [
         { field: 'month', mode: 'every', value: '*' },
         { field: 'dayOfWeek', mode: 'every', value: '*' },
         { field: 'years', mode: 'range', value: [1970,2099] },
+      ],
+    },
+  ],
+  [
+    '0 0 12 ? * * 2099/1',
+    {
+      error: null,
+      result: [
+        { field: 'seconds', mode: 'specific', value: 0 },
+        { field: 'minutes', mode: 'specific', value: 0 },
+        { field: 'hours', mode: 'specific', value: 12 },
+        { field: 'dayOfMonth', mode: 'noSpecific', value: '?' },
+        { field: 'month', mode: 'every', value: '*' },
+        { field: 'dayOfWeek', mode: 'every', value: '*' },
+        { field: 'years', mode: 'increment', value: [2099, 1] },
       ],
     },
   ],

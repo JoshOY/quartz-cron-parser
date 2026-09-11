@@ -1,6 +1,6 @@
 {
   "name": "@joshoy/quartz-cron-parser",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A quartz cron expression parser",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -25,11 +25,13 @@
     "validator"
   ],
   "files": [
+    "CHANGELOG.md",
     "dist/types/src/grammar.d.ts",
     "dist/types/src/index.d.ts",
     "dist/index.js",
     "dist/index.mjs",
-    "dist/index.min.js"
+    "dist/index.min.js",
+    "dist/index.min.js.map"
   ],
   "license": "MIT",
   "scripts": {
@@ -37,7 +39,8 @@
     "build": "npm run gen-parser && rimraf ./dist && rollup -c rollup.config.mjs",
     "release": "npm run build && npm publish --access=public --registry=https://registry.npmjs.org",
     "test": "jest",
-    "test:exports": "node test/exports.cjs && node test/exports.mjs"
+    "test:exports": "node test/exports.cjs && node test/exports.mjs",
+    "test:package": "node test/package.cjs"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^29.0.3",

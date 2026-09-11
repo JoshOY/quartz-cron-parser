@@ -27,6 +27,7 @@ jobs:
       - run: yarn test --runInBand
       - run: yarn build
       - run: yarn test:exports
+      - run: yarn test:package
       - name: Publish package
         run: |
           package_name=$(node -p "require('./package.json').name")

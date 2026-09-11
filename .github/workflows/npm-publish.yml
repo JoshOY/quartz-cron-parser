@@ -28,4 +28,5 @@ jobs:
       - run: yarn test --runInBand
       - run: yarn build
       - run: yarn test:exports
+      - run: yarn test:package
       - run: npm publish --access=public

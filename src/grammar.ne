@@ -178,6 +178,15 @@
       return { mode: 'range', value: [start, end] };
     }
   }
+
+  function convertRangeIncrementalFnFactory(fieldType, cycleRng, lowerBoundary = 0) {
+    const convertIncremental = convertIncrementalFnFactory(fieldType, cycleRng, lowerBoundary);
+    return (d) => {
+      const [start, end] = d[0].value;
+      const incremental = convertIncremental([start, d[1], d[2]]);
+      return { mode: 'rangeIncrement', value: [start, end, incremental.value[1]] };
+    };
+  }
 %}
 
 #####################################
@@ -225,7 +234,7 @@ last -> "L"
 weekday -> "W"
 
 _ ->
-  [ ]:+ {% d => null %}
+  [ \t]:+ {% d => null %}
 
 every -> "*" {% d => ({ mode: 'every', value: '*' }) %}
 
@@ -237,14 +246,16 @@ noSpecificValue -> "?" {% d => ({ mode: 'noSpecific', value: '?' }) %}
 
 seconds -> _seconds {% unwrapAndAddScopeName('seconds') %}
 
-_seconds -> every | secondsIncremental | specificSeconds
+_seconds -> every | specificSeconds
 
 specificSeconds
   -> specificSecondsItem "," specificSeconds {% convertList %}
    | specificSecondsItem {% id %}
 
 specificSecondsItem -> specificSecond {% id %}
+   | secondsRangeIncremental {% id %}
    | secondsRange {% id %}
+   | secondsIncremental {% id %}
 
 specificSecond -> digits {% convertDigitsToMinuteOrSecond %}
 
@@ -254,20 +265,24 @@ secondsIncremental
 
 secondsRange -> digits "-" digits {% convertRangeFnFactory('Seconds', 60) %}
 
+secondsRangeIncremental -> secondsRange "/" digits {% convertRangeIncrementalFnFactory('Seconds', 60) %}
+
 #############
 #  Minutes  #
 #############
 
 minutes -> _minutes {% unwrapAndAddScopeName('minutes') %}
 
-_minutes -> specificMinutes | minutesIncremental | every
+_minutes -> specificMinutes | every
 
 specificMinutes
   -> specificMinutesItem "," specificMinutes {% convertList %}
    | specificMinutesItem {% id %}
 
 specificMinutesItem -> specificMinute {% id %}
+   | minutesRangeIncremental {% id %}
    | minutesRange {% id %}
+   | minutesIncremental {% id %}
 
 specificMinute -> digits {% convertDigitsToMinuteOrSecond %}
 
@@ -277,6 +292,8 @@ minutesIncremental
 
 minutesRange -> digits "-" digits {% convertRangeFnFactory('Minutes', 60) %}
 
+minutesRangeIncremental -> minutesRange "/" digits {% convertRangeIncrementalFnFactory('Minutes', 60) %}
+
 
 ###########
 #  Hours  #
@@ -284,14 +301,16 @@ minutesRange -> digits "-" digits {% convertRangeFnFactory('Minutes', 60) %}
 
 hours -> _hours {% unwrapAndAddScopeName('hours') %}
 
-_hours -> specificHours | hoursIncremental | every
+_hours -> specificHours | every
 
 specificHours
   -> specificHoursItem "," specificHours {% convertList %}
    | specificHoursItem {% id %}
 
 specificHoursItem -> specificHour {% id %}
+   | hoursRangeIncremental {% id %}
    | hoursRange {% id %}
+   | hoursIncremental {% id %}
 
 specificHour -> digits {% convertDigitsToHour %}
 
@@ -301,20 +320,32 @@ hoursIncremental
 
 hoursRange -> digits "-" digits {% convertRangeFnFactory('Hours', 24) %}
 
+hoursRangeIncremental -> hoursRange "/" digits {% convertRangeIncrementalFnFactory('Hours', 24) %}
+
 ##################
 #  Day of month  #
 ##################
 
 dayOfMonth -> _dayOfMonth {% unwrapAndAddScopeName('dayOfMonth') %}
 
-_dayOfMonth -> specificDays | dayOfMonthIncremental | every | noSpecificValue | lastDayOfMonth | lastWeekdayOfMonth | lastXDaysBeforeEndOfMonth | nearestWeekdayOfMonth
+_dayOfMonth -> specificDays | every | noSpecificValue | lastDayOfMonth | lastWeekdayOfMonth | lastXDaysBeforeEndOfMonth | nearestWeekdayOfMonth
 
 specificDays
-  -> specificDaysItem "," specificDays {% convertList %}
+  -> specificDaysListItem "," specificDaysListTail {% convertList %}
    | specificDaysItem {% id %}
 
+specificDaysListTail
+  -> specificDaysListItem "," specificDaysListTail {% convertList %}
+   | specificDaysListItem {% id %}
+
+specificDaysListItem
+  -> specificDaysItem {% id %}
+   | lastDayOfMonth {% id %}
+
 specificDaysItem -> specificDay {% id %}
+   | dayOfMonthRangeIncremental {% id %}
    | dayOfMonthRange {% id %}
+   | dayOfMonthIncremental {% id %}
 
 specificDay -> digits {% convertDigitsToDay %}
 
@@ -323,6 +354,8 @@ dayOfMonthIncremental
   | "*" "/" digits {% convertIncrementalFnFactory('dayOfMonth', 32, 1) %}
 
 dayOfMonthRange -> digits "-" digits {% convertRangeFnFactory('dayOfMonth', 32) %}
+
+dayOfMonthRangeIncremental -> dayOfMonthRange "/" digits {% convertRangeIncrementalFnFactory('dayOfMonth', 32, 1) %}
 
 # L (Last day of the month)
 lastDayOfMonth -> last {% d => ({ mode: 'daysBeforeEndOfMonth', value: 0 }) %}
@@ -363,7 +396,7 @@ nearestWeekdayOfMonth -> digits weekday
 
 month -> _month  {% unwrapAndAddScopeName('month') %}
 
-_month -> specificMonths | monthIncremental | every
+_month -> specificMonths | every
 
 specificMonths
   -> specificMonthItem "," specificMonths {% convertList %}
@@ -372,7 +405,9 @@ specificMonths
 specificMonthItem
   -> specificMonthDigit {% convertDigitsToMonth %}
    | specificMonthString {% convertStringToMonth %}
+   | monthRangeIncremental {% id %}
    | monthRange {% id %}
+   | monthIncremental {% id %}
 
 specificMonthDigit -> digits
 
@@ -387,13 +422,15 @@ monthRange
  ->  digits "-" digits  {% convertRangeFnFactory('month', 13, 1) %}
   |  specificMonthString "-" specificMonthString {% convertRangeMonthString %}
 
+monthRangeIncremental -> monthRange "/" digits {% convertRangeIncrementalFnFactory('month', 13, 1) %}
+
 ##########################
 #  Day of week settings  #
 ##########################
 
 dayOfWeek -> _dayOfWeek {% unwrapAndAddScopeName('dayOfWeek') %}
 
-_dayOfWeek -> specificDayOfWeeks | dayOfWeekIncremental | lastDayOfWeekOfMonth | nthWeekDayOfMonth | every | noSpecificValue
+_dayOfWeek -> specificDayOfWeeks | lastDayOfWeek | lastDayOfWeekOfMonth | nthWeekDayOfMonth | every | noSpecificValue
 
 # Strangely, it is allowed to hybridize both string and numeric values. (e.g. SUN,2,3,FRI)
 specificDayOfWeeks
@@ -403,7 +440,9 @@ specificDayOfWeeks
 specificDayOfWeekItem
   -> specificDayOfWeekDigit {% convertDigitsToDayOfWeek %}
    | specificDayOfWeekString {% convertStringToDayOfWeek %}
+   | dayOfWeekRangeIncremental {% id %}
    | dayOfWeekRange {% id %}
+   | dayOfWeekIncremental {% id %}
 
 specificDayOfWeekDigit -> digit
 
@@ -417,6 +456,11 @@ dayOfWeekIncremental
 dayOfWeekRange
   -> digits "-" digits {% convertRangeFnFactory('dayOfWeek', 8) %}
    |  specificDayOfWeekString "-" specificDayOfWeekString {% convertRangeDayOfWeekString %}
+
+dayOfWeekRangeIncremental -> dayOfWeekRange "/" digits {% convertRangeIncrementalFnFactory('dayOfWeek', 8, 1) %}
+
+# L by itself is equivalent to SAT (7) in a Quartz day-of-week field.
+lastDayOfWeek -> last {% d => ({ mode: 'specific', value: 7 }) %}
 
 lastDayOfWeekOfMonth
   -> digits last {% convertLastDayOfWeekOfMonth %}
@@ -432,18 +476,22 @@ nthWeekDayOfMonth
 
 years -> _years {% unwrapAndAddScopeName('years') %}
 
-_years ->  yearsIncremental | specificYears | every
+_years -> specificYears | every
 
 specificYears
   -> specificYearsItem "," specificYears {% convertList %}
    | specificYearsItem {% id %}
 
 specificYearsItem -> specificYear {% id %}
+   | yearsRangeIncremental {% id %}
    | yearsRange {% id %}
+   | yearsIncremental {% id %}
 
 specificYear -> yearDigits {% convertDigitsToYear %}
 
-yearsIncremental -> yearDigits "/" digits {% convertIncrementalFnFactory('Years', 2099, 1970) %}
-  | "*" "/" digits {% convertIncrementalFnFactory('Years', 2099, 1970) %}
+yearsIncremental -> yearDigits "/" digits {% convertIncrementalFnFactory('Years', 2100, 1970) %}
+  | "*" "/" digits {% convertIncrementalFnFactory('Years', 2100, 1970) %}
 
 yearsRange -> yearDigits "-" yearDigits {% convertRangeFnFactory('Years', 2100, 1970) %}
+
+yearsRangeIncremental -> yearsRange "/" digits {% convertRangeIncrementalFnFactory('Years', 2100, 1970) %}
