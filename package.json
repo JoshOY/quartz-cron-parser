@@ -14,7 +14,7 @@
     "./dist/*": "./dist/*",
     "./package.json": "./package.json"
   },
-  "repository": "git@github.com:JoshOY/quartz-cron-parser.git",
+  "repository": "https://github.com/JoshOY/quartz-cron-parser.git",
   "author": "Josh Ouyang <me@joshoy.org>",
   "packageManager": "yarn@1.22.22",
   "keywords": [

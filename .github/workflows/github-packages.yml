@@ -1,0 +1,33 @@
+# Test and build with Node 22, then publish to GitHub Packages.
+
+name: GitHub Packages
+
+on:
+  push:
+    branches:
+      - "release"
+      - "upgrade-node-v22"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          registry-url: https://npm.pkg.github.com
+          scope: "@joshoy"
+          cache: yarn
+      - run: corepack enable
+      - run: yarn install --frozen-lockfile
+      - run: yarn test --runInBand
+      - run: yarn build
+      - run: yarn test:exports
+      - run: npm publish --access=public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
