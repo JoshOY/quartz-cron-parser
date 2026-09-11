@@ -273,16 +273,16 @@ var grammar = {
     {"name": "_dayOfMonth", "symbols": ["specificDays"]},
     {"name": "_dayOfMonth", "symbols": ["every"]},
     {"name": "_dayOfMonth", "symbols": ["noSpecificValue"]},
-    {"name": "_dayOfMonth", "symbols": ["lastDayOfMonth"]},
-    {"name": "_dayOfMonth", "symbols": ["lastWeekdayOfMonth"]},
-    {"name": "_dayOfMonth", "symbols": ["lastXDaysBeforeEndOfMonth"]},
-    {"name": "_dayOfMonth", "symbols": ["nearestWeekdayOfMonth"]},
     {"name": "specificDays", "symbols": ["specificDaysListItem", {"literal":","}, "specificDaysListTail"], "postprocess": convertList},
-    {"name": "specificDays", "symbols": ["specificDaysItem"], "postprocess": id},
+    {"name": "specificDays", "symbols": ["specificDaysListItem"], "postprocess": id},
     {"name": "specificDaysListTail", "symbols": ["specificDaysListItem", {"literal":","}, "specificDaysListTail"], "postprocess": convertList},
     {"name": "specificDaysListTail", "symbols": ["specificDaysListItem"], "postprocess": id},
     {"name": "specificDaysListItem", "symbols": ["specificDaysItem"], "postprocess": id},
     {"name": "specificDaysListItem", "symbols": ["lastDayOfMonth"], "postprocess": id},
+    {"name": "specificDaysListItem", "symbols": ["lastWeekdayOfMonth"], "postprocess": id},
+    {"name": "specificDaysListItem", "symbols": ["lastXDaysBeforeEndOfMonth"], "postprocess": id},
+    {"name": "specificDaysListItem", "symbols": ["lastXWeekdaysBeforeEndOfMonth"], "postprocess": id},
+    {"name": "specificDaysListItem", "symbols": ["nearestWeekdayOfMonth"], "postprocess": id},
     {"name": "specificDaysItem", "symbols": ["specificDay"], "postprocess": id},
     {"name": "specificDaysItem", "symbols": ["dayOfMonthRangeIncremental"], "postprocess": id},
     {"name": "specificDaysItem", "symbols": ["dayOfMonthRange"], "postprocess": id},
@@ -301,6 +301,16 @@ var grammar = {
           }
           return {
             mode: 'daysBeforeEndOfMonth',
+            value,
+          };
+        } },
+    {"name": "lastXWeekdaysBeforeEndOfMonth", "symbols": ["last", {"literal":"-"}, "digits", "weekday"], "postprocess":  d => {
+          const value = Number(d[2]);
+          if (value > 30) {
+            throw new Error("(Day of Month) Offset from last day must be <= 30");
+          }
+          return {
+            mode: 'nearestWeekdayBeforeEndOfMonth',
             value,
           };
         } },

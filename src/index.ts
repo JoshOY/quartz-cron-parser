@@ -10,7 +10,7 @@ export type QuartzCronValidationResult = {
 };
 
 export type QuartzCronListItem = {
-  mode: 'every' | 'noSpecific' | 'specific' | 'increment' | 'range' | 'rangeIncrement' | 'daysBeforeEndOfMonth' | 'lastweekDay' | 'nearestWeekdayOfMonth' | 'dayOfWeekBeforeEndOfMonth' | 'nthWeekDayOfMonth',
+  mode: 'every' | 'noSpecific' | 'specific' | 'increment' | 'range' | 'rangeIncrement' | 'daysBeforeEndOfMonth' | 'lastweekDay' | 'nearestWeekdayOfMonth' | 'nearestWeekdayBeforeEndOfMonth' | 'dayOfWeekBeforeEndOfMonth' | 'nthWeekDayOfMonth',
   value: number | number[] | '*' | '?';
 };
 
@@ -87,6 +87,9 @@ function validateRanges(result: ParsedCronField[]) {
         const [start, end] = item.value as number[];
         const [name, lower, upper] = FIELD_BOUNDS[index];
         validateRange(name, start, end, lower, upper);
+        if (field.field === 'years' && start > end) {
+          throw new Error('(Year) Start year must be less than stop year');
+        }
       }
     });
   });

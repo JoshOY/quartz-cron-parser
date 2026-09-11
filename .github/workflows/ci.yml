@@ -1,28 +1,25 @@
-# Test and build with Node 22, then publish the package to npm.
+# Build and test pull requests and the main branch with Node 22.
 
-name: Node.js Package
+name: CI
 
 on:
   push:
     branches:
-      - "release"
+      - "main"
+  pull_request:
 
 permissions:
   contents: read
-  id-token: write
 
 jobs:
-  publish:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
-          registry-url: https://registry.npmjs.org
           cache: yarn
-      - name: Install npm with OIDC support
-        run: npm install --global npm@11.19.1
       - run: corepack enable
       - run: yarn install --frozen-lockfile
       - run: yarn build
@@ -32,4 +29,3 @@ jobs:
       - run: yarn test:exports
       - run: yarn test:types
       - run: yarn test:package
-      - run: npm publish --access=public

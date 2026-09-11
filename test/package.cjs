@@ -10,6 +10,8 @@ const packOutput = execFileSync('npm', ['pack', '--dry-run', '--json'], {
 const packageFiles = new Set(JSON.parse(packOutput)[0].files.map(file => file.path));
 
 assert(packageFiles.has('dist/index.min.js.map'), 'The package must include the minified bundle source map');
+assert(packageFiles.has('dist/types/src/index.d.mts'), 'The package must include ES module declarations');
+assert(packageFiles.has('dist/types/src/index.d.cts'), 'The package must include CommonJS declarations');
 assert(packageFiles.has('CHANGELOG.md'), 'The package must include the changelog');
 
 console.log('Package contents passed');
