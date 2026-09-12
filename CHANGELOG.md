@@ -2,6 +2,29 @@
 
 This file records notable changes to the package.
 
+## 1.0.2 - 2026-09-12
+
+### Added
+
+- Add a Quartz 2.5.2 compatibility suite based on the official tutorial and
+  `CronExpressionTest` regression cases.
+- Run build, parser-generation, export, type, and package checks on pull
+  requests and pushes to `main`.
+
+### Fixed
+
+- Parse `L-nW`, including `L-1W,L-1` lists.
+- Parse nearest-weekday values with ordinary day-of-month list items, such as
+  `2W,16`.
+- Reject descending year ranges such as `2099-1970` and
+  `2099-1970/10`, as required by Quartz.
+- Generate separate `.d.mts` and `.d.cts` declarations for ES module and
+  CommonJS consumers.
+
+### Changed
+
+- Build and verify the generated parser before running release tests.
+
 ## 1.0.1 - 2026-09-12
 
 ### Added

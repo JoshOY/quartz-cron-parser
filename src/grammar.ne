@@ -328,11 +328,11 @@ hoursRangeIncremental -> hoursRange "/" digits {% convertRangeIncrementalFnFacto
 
 dayOfMonth -> _dayOfMonth {% unwrapAndAddScopeName('dayOfMonth') %}
 
-_dayOfMonth -> specificDays | every | noSpecificValue | lastDayOfMonth | lastWeekdayOfMonth | lastXDaysBeforeEndOfMonth | nearestWeekdayOfMonth
+_dayOfMonth -> specificDays | every | noSpecificValue
 
 specificDays
   -> specificDaysListItem "," specificDaysListTail {% convertList %}
-   | specificDaysItem {% id %}
+   | specificDaysListItem {% id %}
 
 specificDaysListTail
   -> specificDaysListItem "," specificDaysListTail {% convertList %}
@@ -341,6 +341,10 @@ specificDaysListTail
 specificDaysListItem
   -> specificDaysItem {% id %}
    | lastDayOfMonth {% id %}
+   | lastWeekdayOfMonth {% id %}
+   | lastXDaysBeforeEndOfMonth {% id %}
+   | lastXWeekdaysBeforeEndOfMonth {% id %}
+   | nearestWeekdayOfMonth {% id %}
 
 specificDaysItem -> specificDay {% id %}
    | dayOfMonthRangeIncremental {% id %}
@@ -372,6 +376,19 @@ lastXDaysBeforeEndOfMonth -> last "-" digits
   }
   return {
     mode: 'daysBeforeEndOfMonth',
+    value,
+  };
+} %}
+
+# L-nW (nearest weekday to n day(s) before the end of the month)
+lastXWeekdaysBeforeEndOfMonth -> last "-" digits weekday
+{% d => {
+  const value = Number(d[2]);
+  if (value > 30) {
+    throw new Error("(Day of Month) Offset from last day must be <= 30");
+  }
+  return {
+    mode: 'nearestWeekdayBeforeEndOfMonth',
     value,
   };
 } %}

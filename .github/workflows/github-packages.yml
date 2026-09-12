@@ -24,9 +24,12 @@ jobs:
           cache: yarn
       - run: corepack enable
       - run: yarn install --frozen-lockfile
-      - run: yarn test --runInBand
       - run: yarn build
+      - name: Check generated parser
+        run: git diff --exit-code -- src/grammar.js
+      - run: yarn test --runInBand
       - run: yarn test:exports
+      - run: yarn test:types
       - run: yarn test:package
       - name: Publish package
         run: |

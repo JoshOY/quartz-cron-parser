@@ -119,6 +119,7 @@ Set exactly one of the day-of-month and day-of-week fields to `?`.
 | `/` | Define an increment, for example `0/15` or `0-30/10`. An increment can be a list item. |
 | `L` | Select the last day of the month. In the day-of-week field, `L` means Saturday. |
 | `L-n` | Select a day before the last day of the month, for example `L-2`. |
+| `L-nW` | Select the weekday nearest to a day relative to the end of the month, for example `L-2W`. |
 | `LW` | Select the last weekday of the month. |
 | `nW` | Select the weekday nearest to day `n`, for example `15W`. |
 | `nL` | Select the last specified weekday of the month, for example `FRIL`. |
@@ -127,8 +128,11 @@ Set exactly one of the day-of-month and day-of-week fields to `?`.
 Lists can contain ranges and increments. The parser converts `1,4-7` to
 `[1, 4, 5, 6, 7]`. It converts `0/15,59` to `[0, 15, 30, 45, 59]`.
 
-In the day-of-month field, `L` can appear with ordinary values. For example,
+Quartz 2.5.2 permits special day-of-month values in lists. For example,
 `5,15,L` selects the 5th, the 15th, and the last day of the month.
+`L-1W,L-1` selects the weekday nearest to the day before month-end and the
+day before month-end. `2W,16` selects the weekday nearest to the 2nd and the
+16th.
 
 An overflowing range wraps at the field boundary. For example, `NOV-FEB`
 wraps from December to January. In a list, it expands to `[11, 12, 1, 2]`.
@@ -142,6 +146,8 @@ wraps from December to January. In a list, it expands to `[11, 12, 1, 2]`.
 | `0 0 9 15W * ?` | At 09:00 on the weekday nearest to the 15th. |
 | `0 0 9 LW * ?` | At 09:00 on the last weekday of the month. |
 | `0 0 9 L-2 * ?` | At 09:00 two days before the last day of the month. |
+| `0 0 9 L-2W * ?` | At 09:00 on the weekday nearest to two days before month-end. |
+| `0 0 9 L-1W,L-1 * ?` | At 09:00 on the weekday nearest to the day before month-end and on the day before month-end. |
 | `0 0-30/10 12 ? * *` | At 12:00, 12:10, 12:20, and 12:30. |
 | `0 0 12 5,15,L * ?` | At 12:00 on the 5th, the 15th, and the last day of the month. |
 | `0 0 9 ? * FRI#3` | At 09:00 on the third Friday of the month. |
@@ -217,6 +223,17 @@ and last-day semantics:
 }
 ```
 
+`L-nW` uses `nearestWeekdayBeforeEndOfMonth`. The value is the offset from
+the last day of the month:
+
+```javascript
+{
+  field: 'dayOfMonth',
+  mode: 'nearestWeekdayBeforeEndOfMonth',
+  value: 2
+}
+```
+
 ## Development
 
 Use Node.js 22 and Yarn 1.22.22.
@@ -225,8 +242,11 @@ Use Node.js 22 and Yarn 1.22.22.
 nvm use
 corepack enable
 yarn install --frozen-lockfile
-yarn test --runInBand
 yarn build
+yarn test --runInBand
+yarn test:exports
+yarn test:types
+yarn test:package
 ```
 
 ## License
