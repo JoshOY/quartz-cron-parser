@@ -2,6 +2,13 @@
 
 This file records notable changes to the package.
 
+## 1.0.3 - 2026-09-12
+
+### Changed
+
+- Republish the 1.0.2 package from the merged `main` branch.
+- No parser behavior or public API changes from 1.0.2.
+
 ## 1.0.2 - 2026-09-12
 
 ### Added
